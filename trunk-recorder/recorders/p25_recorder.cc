@@ -89,8 +89,8 @@ void p25_recorder::initialize_prefilter() {
   if1 = 0;
   if2 = 0;
 
-  valve = gr::blocks::copy::make(sizeof(gr_complex));
-  valve->set_enabled(false);
+  //valve = gr::blocks::copy::make(sizeof(gr_complex));
+  //valve->set_enabled(false);
   lo = gr::analog::sig_source_c::make(input_rate, gr::analog::GR_SIN_WAVE, 0, 1.0, 0.0);
   mixer = gr::blocks::multiply_cc::make();
 
@@ -131,13 +131,13 @@ void p25_recorder::initialize_prefilter() {
   arb_resampler = gr::filter::pfb_arb_resampler_ccf::make(arb_rate, arb_taps);
   BOOST_LOG_TRIVIAL(info) << "\t P25 Recorder ARB - Initial Rate: " << input_rate << " Resampled Rate: " << resampled_rate << " Initial Decimation: " << decim << " ARB Rate: " << arb_rate;
 
-  connect(self(), 0, valve, 0);
+  //connect(self(), 0, valve, 0);
   if (double_decim) {
-    connect(valve, 0, bandpass_filter, 0);
+    connect(self(), 0, bandpass_filter, 0);
     connect(bandpass_filter, 0, mixer, 0);
     connect(bfo, 0, mixer, 1);
   } else {
-    connect(valve, 0, mixer, 0);
+    connect(self(), 0, mixer, 0);
     connect(lo, 0, mixer, 1);
   }
   connect(mixer, 0, lowpass_filter, 0);
@@ -398,7 +398,7 @@ void p25_recorder::stop() {
     //BOOST_LOG_TRIVIAL(info) << "[" << this->call->get_short_name() << "]\t\033[0;34m" << this->call->get_call_num() << "C\033[0m\t- Stopping P25 Recorder Num [" << rec_num << "]\tTG: " << this->call->get_talkgroup_display() << "\tFreq: " << format_freq(chan_freq) << " \tTDMA: " << d_phase2_tdma << "\tSlot: " << tdma_slot;
 
     state = INACTIVE;
-    valve->set_enabled(false);
+    //valve->set_enabled(false);
     if (qpsk_mod) {
       qpsk_p25_decode->stop();
       qpsk_p25_decode->reset_rx_status();
@@ -466,7 +466,7 @@ bool p25_recorder::start(Call *call) {
       fsk4_p25_decode->start(call);
     }
     state = ACTIVE;
-    valve->set_enabled(true);
+    //valve->set_enabled(true);
     modulation_selector->set_enabled(true);
 
     recording_count++;

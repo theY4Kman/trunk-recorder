@@ -653,10 +653,11 @@ bool start_recorder(Call *call, TrunkMessage message, System *sys) {
         if (message.meta.length()) {
           BOOST_LOG_TRIVIAL(trace) << message.meta;
         }
-
+        attach_recorder(recorder);
         if (recorder->start(call)) {
           call->set_recorder(recorder);
           call->set_state(RECORDING);
+          
           plugman_setup_recorder(recorder);
           recorder_found = true;
         } else {
@@ -719,6 +720,22 @@ void process_message_queues() {
     }
   }
 }
+
+void attach_recorder(Recorder *rec) {
+  gr::basic_block_sptr src_block = rec->get_source()->get_src_block();
+  tb->lock();
+  tb->connect(src_block, 0, rec, 0);
+  tb->unlock();
+}
+
+void dettach_recorder(Recorder *rec) {
+  gr::basic_block_sptr src_block = rec->get_source()->get_src_block();
+  tb->lock();
+  tb->disconnect(src_block, 0, rec, 0);
+  tb->unlock();
+}
+
+
 
 void manage_conventional_call(Call *call) {
   if (call->get_recorder()) {
@@ -809,12 +826,13 @@ void manage_calls() {
     // If a call's state has been set to COMPLETED, we can conclude the call and delete it
     // we need to check the Call State again because it could have been updated by the previous command.
     if (call->get_state() == COMPLETED) {
-
+      Recorder *recorder = call->get_recorder();
+      dettach_recorder(recorder);
       call->conclude_call();
 
       // The State of the Recorders has changed, so lets send an update
       ended_recording = true;
-      Recorder *recorder = call->get_recorder();
+      
       if (recorder != NULL) {
         plugman_setup_recorder(recorder);
       }
@@ -836,6 +854,7 @@ void manage_calls() {
           // since the Call state is INACTIVE and the Recorder has been going on for a while, we can now
           // set the Call state to COMPLETED
           call->set_state(COMPLETED);
+          dettach_recorder(recorder);
           call->conclude_call();
           // The State of the Recorders has changed, so lets send an update
           ended_recording = true;
@@ -856,7 +875,7 @@ void manage_calls() {
           // since the Call state is INACTIVE and the Recorder has reached a state of IDLE or STOPPED, we can now
           // set the Call state to COMPLETED
           call->set_state(COMPLETED);
-
+          dettach_recorder(recorder);
           call->conclude_call();
           if (recorder != NULL) {
             plugman_setup_recorder(recorder);
