@@ -241,12 +241,13 @@ int Source::get_if_gain() {
   return if_gain;
 }
 
+
 analog_recorder_sptr Source::create_conventional_recorder(gr::top_block_sptr tb) {
 
   analog_recorder_sptr log = make_analog_recorder(this);
 
   analog_recorders.push_back(log);
-  tb->connect(source_block, 0, log, 0);
+  //tb->connect(source_block, 0, log, 0);
   return log;
 }
 
@@ -256,7 +257,7 @@ void Source::create_analog_recorders(gr::top_block_sptr tb, int r) {
   for (int i = 0; i < max_analog_recorders; i++) {
     analog_recorder_sptr log = make_analog_recorder(this);
     analog_recorders.push_back(log);
-    tb->connect(source_block, 0, log, 0);
+    //tb->connect(source_block, 0, log, 0);
   }
 }
 
@@ -293,14 +294,14 @@ void Source::create_digital_recorders(gr::top_block_sptr tb, int r) {
   for (int i = 0; i < max_digital_recorders; i++) {
     p25_recorder_sptr log = make_p25_recorder(this);
     digital_recorders.push_back(log);
-    tb->connect(source_block, 0, log, 0);
+    //tb->connect(source_block, 0, log, 0);
   }
 }
 
 p25_recorder_sptr Source::create_digital_conventional_recorder(gr::top_block_sptr tb) {
   // Not adding it to the vector of digital_recorders. We don't want it to be available for trunk recording.
   p25_recorder_sptr log = make_p25_recorder(this);
-  tb->connect(source_block, 0, log, 0);
+  //tb->connect(source_block, 0, log, 0);
   return log;
 }
 
@@ -309,7 +310,7 @@ void Source::create_debug_recorder(gr::top_block_sptr tb, int source_num) {
   debug_recorder_port = config->debug_recorder_port + source_num;
   debug_recorder_sptr log = make_debug_recorder(this, config->debug_recorder_address, debug_recorder_port);
   debug_recorders.push_back(log);
-  tb->connect(source_block, 0, log, 0);
+  //tb->connect(source_block, 0, log, 0);
 }
 
 Recorder *Source::get_debug_recorder() {
@@ -337,7 +338,7 @@ void Source::create_sigmf_recorders(gr::top_block_sptr tb, int r) {
     sigmf_recorder_sptr log = make_sigmf_recorder(this);
 
     sigmf_recorders.push_back(log);
-    tb->connect(source_block, 0, log, 0);
+    //tb->connect(source_block, 0, log, 0);
   }
 }
 
