@@ -599,7 +599,7 @@ void attach_recorder(Recorder *rec) {
   gr::basic_block_sptr src_block = rec->get_source()->get_src_block();
   //gr::basic_block_sptr rec_block = rec;
   tb->lock();
-  tb->connect(src_block, 0, boost::shared_ptr<gr::basic_block>(rec), 0);
+  tb->connect(src_block, 0, boost::shared_ptr<gr::basic_block>((gr::basic_block *) rec), 0);
   tb->unlock();
 }
 
@@ -607,7 +607,7 @@ void dettach_recorder(Recorder *rec) {
   gr::basic_block_sptr src_block = rec->get_source()->get_src_block();
   //gr::basic_block_sptr rec_block = rec;
   tb->lock();
-  tb->disconnect(src_block, 0, boost::shared_ptr<gr::basic_block>(rec), 0);
+  tb->disconnect(src_block, 0, boost::shared_ptr<gr::basic_block>((gr::basic_block *) rec), 0);
   tb->unlock();
 }
 
