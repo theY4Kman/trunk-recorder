@@ -443,6 +443,45 @@ Recorder *Source::get_digital_recorder(Talkgroup *talkgroup) {
   return get_digital_recorder();
 }
 
+
+
+void Source::disconnect_digital_recorder(gr::top_block_sptr tb,Recorder *rec) {
+  for (std::vector<p25_recorder_sptr>::iterator it = digital_recorders.begin();
+       it != digital_recorders.end(); it++) {
+    p25_recorder_sptr rx = *it;
+
+    if ((Recorder *)rx.get() == rec) {
+        tb->lock();
+        tb->disconnect(this->get_src_block(), 0, rx, 0);
+        tb->unlock();
+      break;
+    }
+  }
+}
+Recorder *Source::get_digital_recorder(gr::top_block_sptr tb) {
+  for (std::vector<p25_recorder_sptr>::iterator it = digital_recorders.begin();
+       it != digital_recorders.end(); it++) {
+    p25_recorder_sptr rx = *it;
+
+    if (rx->get_state() == AVAILABLE) {
+        tb->lock();
+        tb->connect(this->get_src_block(), 0, rx, 0);
+        tb->unlock();
+      return (Recorder *)rx.get();
+
+      break;
+    }
+  }
+  BOOST_LOG_TRIVIAL(info) << "[ " << device << " ] No Digital Recorders Available";
+
+  for (std::vector<p25_recorder_sptr>::iterator it = digital_recorders.begin();
+       it != digital_recorders.end(); it++) {
+    p25_recorder_sptr rx = *it;
+    BOOST_LOG_TRIVIAL(info) << "[ " << rx->get_num() << " ] State: " << format_state(rx->get_state()) << " Freq: " << rx->get_freq();
+  }
+  return NULL;
+}
+
 Recorder *Source::get_digital_recorder() {
   for (std::vector<p25_recorder_sptr>::iterator it = digital_recorders.begin();
        it != digital_recorders.end(); it++) {

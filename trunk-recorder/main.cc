@@ -604,11 +604,7 @@ void attach_recorder(Recorder *rec) {
 }
 
 void dettach_recorder(Recorder *rec) {
-  gr::basic_block_sptr src_block = rec->get_source()->get_src_block();
-  //gr::basic_block_sptr rec_block = rec;
-  tb->lock();
-  tb->disconnect(src_block, 0, boost::shared_ptr<gr::basic_block>((gr::basic_block *) rec), 0);
-  tb->unlock();
+  rec->get_source()->disconnect_digital_recorder(tb, rec);
 }
 
 
@@ -666,7 +662,7 @@ bool start_recorder(Call *call, TrunkMessage message, System *sys) {
         if ((default_mode == "analog") && (sys->get_system_type() == "smartnet")) {
           recorder = source->get_analog_recorder();
         } else {
-          recorder = source->get_digital_recorder();
+          recorder = source->get_digital_recorder(tb);
         }
       }
       //int total_recorders = get_total_recorders();
@@ -675,7 +671,7 @@ bool start_recorder(Call *call, TrunkMessage message, System *sys) {
         if (message.meta.length()) {
           BOOST_LOG_TRIVIAL(trace) << message.meta;
         }
-        attach_recorder(recorder);
+        //attach_recorder(recorder);
         if (recorder->start(call)) {
           call->set_recorder(recorder);
           call->set_state(RECORDING);
