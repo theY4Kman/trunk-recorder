@@ -262,8 +262,9 @@ State analog_recorder::get_state() {
 }
 
 double analog_recorder::since_last_write() {
-  time_t now = time(NULL);
-  return now - wav_sink->get_stop_time();
+  auto end = std::chrono::steady_clock::now();
+  std::chrono::duration<double> diff = end - wav_sink->get_last_write_time();
+  return diff.count();
 }
 
 int analog_recorder::get_num() {
