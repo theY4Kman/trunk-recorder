@@ -166,22 +166,22 @@ void p25_recorder_impl::initialize_prefilter() {
   connect(valve, 0, latency_tagger, 0);
 */
 
-/*
+
   // For Latency Manager
   latency_manager = gr::latency_manager::latency_manager::make(1000,1000,sizeof(gr_complex));      
   tag_to_msg = gr::latency_manager::tag_to_msg::make(sizeof(gr_complex), "tagger");
-  connect(latency_tagger, 0, latency_manager,0);
-  */
+  connect(valve, 0, latency_manager,0);
+  
   if (double_decim) {
-    //connect(latency_manager, 0, bandpass_filter, 0);
+    connect(latency_manager, 0, bandpass_filter, 0);
 
-    connect(valve, 0, bandpass_filter, 0);
+    //connect(valve, 0, bandpass_filter, 0);
     connect(bandpass_filter, 0, mixer, 0);
     connect(bfo, 0, mixer, 1);
   } else {
-    //connect(latency_manager, 0,  mixer, 0);
+    connect(latency_manager, 0,  mixer, 0);
 
-    connect(valve, 0,  mixer, 0);
+    //connect(valve, 0,  mixer, 0);
     connect(lo, 0, mixer, 1);
   }
   connect(mixer, 0,lowpass_filter, 0);
@@ -233,12 +233,13 @@ void p25_recorder_impl::initialize(Source *src) {
   fsk4_p25_decode = make_p25_recorder_decode(this, silence_frames);
 
   modulation_selector->set_enabled(true);
-      /*
+      
       // For the Latency Manager
         //connect(fll_band_edge,0, tag_to_msg, 0);
-          //msg_connect(tag_to_msg, "msg", latency_manager, "token" );
-          */
-         /*
+  msg_connect(tag_to_msg, "msg", latency_manager, "token" );
+          
+         
+                 /*
          // For the Latency Probe
         //connect(fll_band_edge,0, probe, 0);
   //connect(probe, 0,  modulation_selector, 0);
