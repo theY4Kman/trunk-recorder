@@ -145,6 +145,8 @@ if (STREAMER)
     find_package(GRPC REQUIRED)
 endif()
 
+find_library(TCMALLOC_LIBRARY NAMES tcmalloc_minimal)
+
 ########################################################################
 # Setup boost
 ########################################################################
@@ -224,6 +226,11 @@ set(CMAKE_CXX_FLAGS_DEBUG "-Wall -Wno-unused-local-typedef -Wno-deprecated-decla
 SET(CMAKE_CXX_STANDARD 17)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -Wno-narrowing -fvisibility=hidden -fPIC")
+
+# Disable builtin implementations of malloc/free to avoid conflicts with tcmalloc
+if(TCMALLOC_LIBRARY)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free")
+endif(TCMALLOC_LIBRARY)
 
 
 
@@ -351,7 +358,7 @@ add_subdirectory(plugins/simplestream)
 
 add_executable(trunk-recorder trunk-recorder/main.cc) # ${trunk_recorder_sources})
 
-target_link_libraries(trunk-recorder git trunk_recorder_library gnuradio-op25_repeater   ${CMAKE_DL_LIBS} ssl crypto ${CURL_LIBRARIES} ${Boost_LIBRARIES} ${GNURADIO_PMT_LIBRARIES} ${GNURADIO_RUNTIME_LIBRARIES} ${GNURADIO_FILTER_LIBRARIES} ${GNURADIO_DIGITAL_LIBRARIES} ${GNURADIO_ANALOG_LIBRARIES} ${GNURADIO_AUDIO_LIBRARIES} ${GNURADIO_UHD_LIBRARIES} ${UHD_LIBRARIES} ${GNURADIO_BLOCKS_LIBRARIES} ${GNURADIO_OSMOSDR_LIBRARIES} ) # gRPC::grpc++_reflection protobuf::libprotobuf)
+target_link_libraries(trunk-recorder git trunk_recorder_library gnuradio-op25_repeater   ${CMAKE_DL_LIBS} ssl crypto ${CURL_LIBRARIES} ${Boost_LIBRARIES} ${GNURADIO_PMT_LIBRARIES} ${GNURADIO_RUNTIME_LIBRARIES} ${GNURADIO_FILTER_LIBRARIES} ${GNURADIO_DIGITAL_LIBRARIES} ${GNURADIO_ANALOG_LIBRARIES} ${GNURADIO_AUDIO_LIBRARIES} ${GNURADIO_UHD_LIBRARIES} ${UHD_LIBRARIES} ${GNURADIO_BLOCKS_LIBRARIES} ${GNURADIO_OSMOSDR_LIBRARIES} ${TCMALLOC_LIBRARY} ) # gRPC::grpc++_reflection protobuf::libprotobuf)
 
 #target_link_libraries(trunk-recorder PRIVATE nlohmann_json::nlohmann_json )
 
