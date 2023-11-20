@@ -48,9 +48,9 @@ protected:
 
 public:
   p25_recorder_qpsk_demod();
-  virtual ~p25_recorder_qpsk_demod();
+  ~p25_recorder_qpsk_demod() override;
   void switch_tdma(bool phase2);
-  void reset();
+  void reset() const;
 
 private:
   double system_channel_rate;
@@ -70,6 +70,6 @@ private:
   gr::blocks::complex_to_arg::sptr to_float;
   gr::blocks::multiply_const_ff::sptr rescale;
 
-    void reset_block(gr::basic_block_sptr block); 
+  static void reset_block(const gr::basic_block_sptr& block);
 };
 #endif

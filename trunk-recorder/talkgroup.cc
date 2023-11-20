@@ -1,13 +1,15 @@
 #include "talkgroup.h"
 
-Talkgroup::Talkgroup(int sys_num, long num, std::string mode, std::string alpha_tag, std::string description, std::string tag, std::string group, int priority, unsigned long preferredNAC) {
+#include <utility>
+
+Talkgroup::Talkgroup(const int sys_num, const long num, std::string mode, std::string alpha_tag, std::string description, std::string tag, std::string group, const int priority, const unsigned long preferredNAC) {
   this->sys_num = sys_num;
   this->number = num;
-  this->mode = mode;
-  this->alpha_tag = alpha_tag;
-  this->description = description;
-  this->tag = tag;
-  this->group = group;
+  this->mode = std::move(mode);
+  this->alpha_tag = std::move(alpha_tag);
+  this->description = std::move(description);
+  this->tag = std::move(tag);
+  this->group = std::move(group);
   this->priority = priority;
   this->active = false;
   this->freq = 0;
@@ -15,14 +17,14 @@ Talkgroup::Talkgroup(int sys_num, long num, std::string mode, std::string alpha_
   this->preferredNAC = preferredNAC;
 }
 
-Talkgroup::Talkgroup(int sys_num, long num, double freq, double tone, std::string alpha_tag, std::string description, std::string tag, std::string group) {
+Talkgroup::Talkgroup(const int sys_num, const long num, const double freq, const double tone, std::string alpha_tag, std::string description, std::string tag, std::string group) {
   this->sys_num = sys_num;
   this->number = num;
   this->mode = "Z";
-  this->alpha_tag = alpha_tag;
-  this->description = description;
-  this->tag = tag;
-  this->group = group;
+  this->alpha_tag = std::move(alpha_tag);
+  this->description = std::move(description);
+  this->tag = std::move(tag);
+  this->group = std::move(group);
   this->active = false;
   this->freq = freq;
   this->tone = tone;
@@ -44,20 +46,19 @@ std::string Talkgroup::menu_string() {
   return buffAsStdStr;
 }
 
-int Talkgroup::get_priority() {
+int Talkgroup::get_priority() const {
   return priority;
 }
 
-unsigned long Talkgroup::get_preferredNAC() {
+unsigned long Talkgroup::get_preferredNAC() const {
   return preferredNAC;
 }
 
-void Talkgroup::set_priority(int new_priority) {
+void Talkgroup::set_priority(const int new_priority) {
   priority = new_priority;
-  return;
 }
 
-bool Talkgroup::is_active() {
+bool Talkgroup::is_active() const {
   return active;
 }
 

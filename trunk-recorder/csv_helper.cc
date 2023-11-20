@@ -15,9 +15,8 @@ std::istream &safeGetline(std::istream &is, std::string &t) {
   std::streambuf *sb = is.rdbuf();
 
   for (;;) {
-    int c = sb->sbumpc();
 
-    switch (c) {
+    switch (const int c = sb->sbumpc()) {
     case '\n':
       return is;
 
@@ -35,7 +34,7 @@ std::istream &safeGetline(std::istream &is, std::string &t) {
       return is;
 
     default:
-      t += (char)c;
+      t += static_cast<char>(c);
     }
   }
 }

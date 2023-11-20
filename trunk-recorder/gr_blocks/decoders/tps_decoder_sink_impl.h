@@ -49,13 +49,13 @@ private:
 
   void initialize_p25(void);
   void process_message(gr::message::sptr msg);
-  void parse_p25_json(std::string json);
+  void parse_p25_json(const std::string &json);
   void decode_mbt_data(unsigned long opcode, boost::dynamic_bitset<> &header, boost::dynamic_bitset<> &mbt_data, unsigned long link_id, unsigned long nac);
   void decode_tsbk(boost::dynamic_bitset<> &tsbk, unsigned long nac);
 
   unsigned long bitset_shift_mask(boost::dynamic_bitset<> &tsbk, int shift, unsigned long long mask);
 
-  std::string to_hex(const std::string &s, bool upper = false, bool spaced = true);
+  static std::string to_hex(const std::string &s, bool upper = false, bool spaced = true);
 
 public:
 #if GNURADIO_VERSION < 0x030900
@@ -66,7 +66,7 @@ public:
 
   gr::msg_queue::sptr rx_queue;
 
-  static sptr make(unsigned int sample_rate, decoder_callback callback);
+  static sptr make(unsigned int sample_rate, const decoder_callback &callback);
 
   tps_decoder_sink_impl(unsigned int sample_rate, decoder_callback callback);
 

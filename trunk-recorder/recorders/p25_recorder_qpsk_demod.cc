@@ -17,17 +17,15 @@ p25_recorder_qpsk_demod::p25_recorder_qpsk_demod()
   system_channel_rate = symbol_rate * samples_per_symbol;
 }
 
-p25_recorder_qpsk_demod::~p25_recorder_qpsk_demod() {
-}
+p25_recorder_qpsk_demod::~p25_recorder_qpsk_demod() = default;
 
-void p25_recorder_qpsk_demod::reset_block(gr::basic_block_sptr block) {
-  gr::block_detail_sptr detail;
-  gr::block_sptr grblock = cast_to_block_sptr(block);
-  detail = grblock->detail();
+void p25_recorder_qpsk_demod::reset_block(const gr::basic_block_sptr &block) {
+  const gr::block_sptr grblock = cast_to_block_sptr(block);
+  const gr::block_detail_sptr detail = grblock->detail();
   detail->reset_nitem_counters();
 }
 
-void p25_recorder_qpsk_demod::reset() {
+void p25_recorder_qpsk_demod::reset() const {
     costas->set_phase(0);
     costas->set_frequency(0);
     clock->reset();
@@ -41,8 +39,8 @@ void p25_recorder_qpsk_demod::reset() {
 
 void p25_recorder_qpsk_demod::switch_tdma(bool phase2) {
   double omega;
-  double fmax;
-  const double pi = M_PI;
+  // double fmax;
+  // const double pi = M_PI;
   tdma_mode = phase2;
 
   if (phase2) {
@@ -55,9 +53,9 @@ void p25_recorder_qpsk_demod::switch_tdma(bool phase2) {
 
   system_channel_rate = symbol_rate * samples_per_symbol;
 
-  omega = double(system_channel_rate) / double(symbol_rate);
-  fmax = symbol_rate / 2; // Hz
-  fmax = 2 * pi * fmax / double(system_channel_rate);
+  omega = system_channel_rate / symbol_rate;
+  // fmax = symbol_rate / 2; // Hz
+  // fmax = 2 * pi * fmax / double(system_channel_rate);
   clock->set_omega(omega);
   //costas_clock->update_fmax(fmax);
   this->reset();
@@ -65,17 +63,17 @@ void p25_recorder_qpsk_demod::switch_tdma(bool phase2) {
 }
 
 void p25_recorder_qpsk_demod::initialize() {
-  const double pi = M_PI;
+  constexpr double pi = M_PI;
 
   agc = gr::analog::feedforward_agc_cc::make(16, 1.0);
 
   // Gardner Costas Clock
-  double gain_mu = 0.025; // 0.025
-  double costas_alpha = 0.008;
-  double omega = double(system_channel_rate) / symbol_rate; // set to 6000 for TDMA, should be symbol_rate
-  double gain_omega = 0.1 * gain_mu * gain_mu;
-  double fmax = 3000; // Hz
-  fmax = 2 * pi * fmax / double(system_channel_rate);
+  constexpr double gain_mu = 0.025; // 0.025
+  constexpr double costas_alpha = 0.008;
+  const double omega = system_channel_rate / symbol_rate; // set to 6000 for TDMA, should be symbol_rate
+  constexpr double gain_omega = 0.1 * gain_mu * gain_mu;
+  // double fmax = 3000; // Hz
+  // fmax = 2 * pi * fmax / double(system_channel_rate);
 
   costas = gr::op25_repeater::costas_loop_cc::make(costas_alpha,  4, (2 * pi)/4 );
   clock = gr::op25_repeater::gardner_cc::make(omega, gain_mu, gain_omega);

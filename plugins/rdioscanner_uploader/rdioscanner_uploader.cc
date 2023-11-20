@@ -1,14 +1,14 @@
 #include <curl/curl.h>
-#include <time.h>
 #include <iomanip>
+#include <time.h>
 #include <vector>
 
 #include "../../trunk-recorder/call_concluder/call_concluder.h"
 #include "../../trunk-recorder/plugin_manager/plugin_api.h"
+#include "../trunk-recorder/gr_blocks/decoder_wrapper.h"
+#include <boost/algorithm/string.hpp>
 #include <boost/dll/alias.hpp> // for BOOST_DLL_ALIAS
 #include <boost/foreach.hpp>
-#include <boost/algorithm/string.hpp>
-#include "../trunk-recorder/gr_blocks/decoder_wrapper.h"
 #include <sys/stat.h>
 
 struct Rdio_Scanner_System {
@@ -29,17 +29,17 @@ class Rdio_Scanner_Uploader : public Plugin_Api {
   Rdio_Scanner_Uploader_Data data;
 
 public:
-  Rdio_Scanner_System *get_system(std::string short_name) {
-    for (std::vector<Rdio_Scanner_System>::iterator it = data.systems.begin(); it != data.systems.end(); ++it) {
-      if (it->short_name == short_name) {
-        return &(*it);
+  Rdio_Scanner_System *get_system(const std::string &short_name) {
+    for (auto &system : data.systems) {
+      if (system.short_name == short_name) {
+        return &system;
       }
     }
-    return NULL;
+    return nullptr;
   }
 
-  static size_t write_callback(void *contents, size_t size, size_t nmemb, void *userp) {
-    ((std::string *)userp)->append((char *)contents, size * nmemb);
+  static size_t write_callback(void *contents, const size_t size, const size_t nmemb, void *userp) {
+    static_cast<std::string *>(userp)->append(static_cast<char *>(contents), size * nmemb);
     return size * nmemb;
   }
 
@@ -63,7 +63,7 @@ public:
       system_id = sys->system_id;
     }
 
-    if (api_key.size() == 0) {
+    if (api_key.empty()) {
       return 0;
     }
 
@@ -90,7 +90,7 @@ public:
     boost::filesystem::path audioPath(compress_wav ? call_info.converted : call_info.filename);
     boost::filesystem::path audioName = audioPath.filename();
 
-    if (call_info.transmission_source_list.size() != 0) {
+    if (!call_info.transmission_source_list.empty()) {
       for (unsigned long i = 0; i < call_info.transmission_source_list.size(); i++) {
         source_list << "{ \"pos\": " << std::setprecision(2) << call_info.transmission_source_list[i].position << ", \"src\": " << std::setprecision(0) << call_info.transmission_source_list[i].source << " }";
 
@@ -104,42 +104,37 @@ public:
       source_list << "]";
     }
 
-    if (call_info.patched_talkgroups.size()>1){
+    if (call_info.patched_talkgroups.size() > 1) {
       for (unsigned long i = 0; i < call_info.patched_talkgroups.size(); i++) {
-        if (i!=0) {
+        if (i != 0) {
           patch_list << ",";
         }
-        patch_list << (int)call_info.patched_talkgroups[i];
+        patch_list << static_cast<int>(call_info.patched_talkgroups[i]);
       }
       patch_list << "]";
-    }
-    else {
+    } else {
       patch_list << "]";
     }
-
 
     std::ostringstream freq_list;
     std::string freq_list_string;
     freq_list << std::fixed << std::setprecision(2);
     freq_list << "[";
 
-    if (call_info.transmission_error_list.size() != 0) {
+    if (!call_info.transmission_error_list.empty()) {
       for (std::size_t i = 0; i < call_info.transmission_error_list.size(); i++) {
-          freq_list << "{\"freq\": " << std::fixed << std::setprecision(0) << call_info.freq << ", \"time\": " << call_info.transmission_error_list[i].time << ", \"pos\": " << std::fixed << std::setprecision(2) << call_info.transmission_error_list[i].position << ", \"len\": " << call_info.transmission_error_list[i].total_len  << ", \"errorCount\": " << std::setprecision(0) <<call_info.transmission_error_list[i].error_count << ", \"spikeCount\": " << call_info.transmission_error_list[i].spike_count << "}";
-
+        freq_list << "{\"freq\": " << std::fixed << std::setprecision(0) << call_info.freq << ", \"time\": " << call_info.transmission_error_list[i].time << ", \"pos\": " << std::fixed << std::setprecision(2) << call_info.transmission_error_list[i].position << ", \"len\": " << call_info.transmission_error_list[i].total_len << ", \"errorCount\": " << std::setprecision(0) << call_info.transmission_error_list[i].error_count << ", \"spikeCount\": " << call_info.transmission_error_list[i].spike_count << "}";
         if (i < (call_info.transmission_error_list.size() - 1)) {
           freq_list << ", ";
         } else {
           freq_list << "]";
         }
       }
-    }else {
+    } else {
       freq_list << "]";
     }
 
-
-
-    //BOOST_LOG_TRIVIAL(error) << "Got source list: " << source_list.str();
+    // BOOST_LOG_TRIVIAL(error) << "Got source list: " << source_list.str();
     CURL *curl;
     CURLMcode res;
     CURLM *multi_handle;
@@ -152,27 +147,27 @@ public:
     call_length_string = call_length.str();
     patch_list_string = patch_list.str();
 
-    struct curl_httppost *formpost = NULL;
-    struct curl_httppost *lastptr = NULL;
-    struct curl_slist *headerlist = NULL;
+    struct curl_httppost *formpost = nullptr;
+    struct curl_httppost *lastptr = nullptr;
+    struct curl_slist *headerlist = nullptr;
 
     /* Fill in the file upload field. This makes libcurl load data from
      the given file name when curl_easy_perform() is called. */
     curl_formadd(&formpost,
-                &lastptr,
-                CURLFORM_COPYNAME, "audio",
-                CURLFORM_FILE, compress_wav ? call_info.converted : call_info.filename,
-                CURLFORM_CONTENTTYPE, "application/octet-stream",
-                CURLFORM_END);
+                 &lastptr,
+                 CURLFORM_COPYNAME, "audio",
+                 CURLFORM_FILE, compress_wav ? call_info.converted : call_info.filename,
+                 CURLFORM_CONTENTTYPE, "application/octet-stream",
+                 CURLFORM_END);
 
     curl_formadd(&formpost,
-                &lastptr,
+                 &lastptr,
                  CURLFORM_COPYNAME, "audioName",
                  CURLFORM_COPYCONTENTS, audioName.c_str(),
                  CURLFORM_END);
 
     curl_formadd(&formpost,
-                &lastptr,
+                 &lastptr,
                  CURLFORM_COPYNAME, "audioType",
                  CURLFORM_COPYCONTENTS, compress_wav ? "audio/mp4" : "audio/wav",
                  CURLFORM_END);
@@ -232,10 +227,10 @@ public:
                  CURLFORM_END);
 
     curl_formadd(&formpost,
-                  &lastptr,
-                  CURLFORM_COPYNAME, "talkgroupName",
-                  CURLFORM_COPYCONTENTS, boost::lexical_cast<std::string>(call_info.talkgroup_description).c_str(),
-                  CURLFORM_END);
+                 &lastptr,
+                 CURLFORM_COPYNAME, "talkgroupName",
+                 CURLFORM_COPYCONTENTS, boost::lexical_cast<std::string>(call_info.talkgroup_description).c_str(),
+                 CURLFORM_END);
 
     curl_formadd(&formpost,
                  &lastptr,
@@ -278,7 +273,7 @@ public:
       curl_multi_perform(multi_handle, &still_running);
 
       while (still_running) {
-        struct timeval timeout;
+        timeval timeout{};
         int rc;       /* select() return code */
         CURLMcode mc; /* curl_multi_fdset() return code */
 
@@ -323,7 +318,7 @@ public:
         if (maxfd == -1) {
           /* Portable sleep for platforms other than Windows. */
           struct timeval wait = {0, 100 * 1000}; /* 100ms */
-          rc = select(0, NULL, NULL, NULL, &wait);
+          rc = select(0, nullptr, nullptr, nullptr, &wait);
         } else {
           /* Note that on some platforms 'timeout' may be modified by select().
            If you need access to the original value save a copy beforehand. */
@@ -357,7 +352,7 @@ public:
       curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
 
       if (res == CURLM_OK && response_code == 200) {
-        struct stat file_info;
+        struct stat file_info {};
         stat(compress_wav ? call_info.converted : call_info.filename, &file_info);
 
         BOOST_LOG_TRIVIAL(info) << "[" << call_info.short_name << "]\t\033[0;34m" << call_info.call_num << "C\033[0m\tTG: " << call_info.talkgroup_display << "\tFreq: " << format_freq(call_info.freq) << "\tRdio Scanner Upload Success - file size: " << file_info.st_size;
@@ -369,11 +364,11 @@ public:
     return 1;
   }
 
-  int call_end(Call_Data_t call_info) {
+  int call_end(const Call_Data_t call_info) override {
     return upload(call_info);
   }
 
- int parse_config(json config_data) {
+ int parse_config(json config_data) override {
     /*
           system->set_rdioscanner_api_key(node.second.get<std::string>("rdioscannerApiKey", ""));
       BOOST_LOG_TRIVIAL(info) << "Rdio Scanner API Key: " << system->get_rdioscanner_api_key();
@@ -384,8 +379,7 @@ public:
     BOOST_LOG_TRIVIAL(info) << "Rdio Scanner Server: " << config.rdioscanner_server;*/
 
     // Tests to see if the rdioscannerServer value exists in the config file
-    bool upload_server_exists = config_data.contains("server");
-    if (!upload_server_exists) {
+    if (const bool upload_server_exists = config_data.contains("server"); !upload_server_exists) {
       return 1;
     }
 
@@ -393,29 +387,28 @@ public:
     BOOST_LOG_TRIVIAL(info) << "Rdio Scanner Server: " << this->data.server;
 
     // from: http://www.zedwood.com/article/cpp-boost-url-regex
-    boost::regex ex("(http|https)://([^/ :]+):?([^/ ]*)(/?[^ #?]*)\\x3f?([^ #]*)#?([^ ]*)");
-    boost::cmatch what;
+    const boost::regex ex("(http|https)://([^/ :]+):?([^/ ]*)(/?[^ #?]*)\\x3f?([^ #]*)#?([^ ]*)");
 
-    if (!regex_match(this->data.server.c_str(), what, ex)) {
+    if (boost::cmatch what; !regex_match(this->data.server.c_str(), what, ex)) {
       BOOST_LOG_TRIVIAL(error) << "Unable to parse Rdio Scanner Server URL\n";
       return 1;
     }
 
         // Gets the API key for each system, if defined
-      for (json element : config_data["systems"]) {
-        bool rdioscanner_exists = element.contains("apiKey");
-       if (rdioscanner_exists) {
-         Rdio_Scanner_System sys;
+      for (const json& element : config_data["systems"]) {
+        if (!element.contains("apiKey")) {
+          continue;
+        }
 
-         sys.api_key = element.value("apiKey", "");
-         sys.system_id = element.value("systemId", 0);
-         sys.short_name = element.value("shortName", "");
-         BOOST_LOG_TRIVIAL(info) << "Uploading calls for: " << sys.short_name;
-         this->data.systems.push_back(sys);
-       }
-     }
+        Rdio_Scanner_System sys;
+        sys.api_key = element.value("apiKey", "");
+        sys.system_id = element.value("systemId", 0);
+        sys.short_name = element.value("shortName", "");
+        BOOST_LOG_TRIVIAL(info) << "Uploading calls for: " << sys.short_name;
+        this->data.systems.push_back(sys);
+    }
 
-     if (this->data.systems.size() == 0) {
+     if (this->data.systems.empty()) {
        BOOST_LOG_TRIVIAL(error) << "Rdio Scanner Server set, but no Systems are configured\n";
        return 1;
      }
@@ -441,12 +434,11 @@ public:
 */
   // Factory method
   static boost::shared_ptr<Rdio_Scanner_Uploader> create() {
-    return boost::shared_ptr<Rdio_Scanner_Uploader>(
-        new Rdio_Scanner_Uploader());
+    return boost::make_shared<Rdio_Scanner_Uploader>();
   }
 };
 
 BOOST_DLL_ALIAS(
     Rdio_Scanner_Uploader::create, // <-- this function is exported with...
-    create_plugin             // <-- ...this alias name
+    create_plugin                  // <-- ...this alias name
 )

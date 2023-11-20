@@ -2,7 +2,7 @@
 #define TALKGROUP_H
 
 #include <iostream>
-#include <stdio.h>
+#include <cstdio>
 #include <string>
 //#include <sstream>
 
@@ -25,9 +25,9 @@ public:
   Talkgroup(int sys_num, long num, std::string mode, std::string alpha_tag, std::string description, std::string tag, std::string group, int priority, unsigned long preferredNAC);
   Talkgroup(int sys_num, long num, double freq, double tone, std::string alpha_tag, std::string description, std::string tag, std::string group);
 
-  bool is_active();
-  int get_priority();
-  unsigned long get_preferredNAC();
+  [[nodiscard]] bool is_active() const;
+  [[nodiscard]] int get_priority() const;
+  [[nodiscard]] unsigned long get_preferredNAC() const;
   void set_priority(int new_priority);
   void set_active(bool a);
   std::string menu_string();

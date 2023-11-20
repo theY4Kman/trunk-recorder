@@ -94,7 +94,7 @@ void exit_interupt(int sig) { // can be called asynchronously
 
 unsigned GCD(unsigned u, unsigned v) {
   while (v != 0) {
-    unsigned r = u % v;
+    const unsigned r = u % v;
     u = v;
     v = r;
   }
@@ -104,9 +104,7 @@ unsigned GCD(unsigned u, unsigned v) {
 int get_total_recorders() {
   int total_recorders = 0;
 
-  for (vector<Call *>::iterator it = calls.begin(); it != calls.end(); it++) {
-    Call *call = *it;
-
+  for (const auto call : calls) {
     if (call->get_state() == RECORDING) {
       total_recorders++;
     }
@@ -116,7 +114,7 @@ int get_total_recorders() {
 
 // This maybe needed by websocket_pp
 bool replace(std::string &str, const std::string &from, const std::string &to) {
-  size_t start_pos = str.find(from);
+  const size_t start_pos = str.find(from);
 
   if (start_pos == std::string::npos)
     return false;
@@ -125,7 +123,7 @@ bool replace(std::string &str, const std::string &from, const std::string &to) {
   return true;
 }
 
-void process_signal(long unitId, const char *signaling_type, gr::blocks::SignalType sig_type, Call *call, System *system, Recorder *recorder) {
+void process_signal(const long unitId, const char *signaling_type, const gr::blocks::SignalType sig_type, Call *call, System *system, Recorder *recorder) {
   plugman_signal(unitId, signaling_type, sig_type, call, system, recorder);
 }
 
@@ -135,8 +133,6 @@ bool start_recorder(Call *call, TrunkMessage message, System *sys) {
   bool source_found = false;
   bool recorder_found = false;
   Recorder *recorder;
-  Recorder *debug_recorder;
-  Recorder *sigmf_recorder;
 
   if (!talkgroup && (sys->get_record_unknown() == false)) {
     call->set_state(MONITORING);
@@ -153,13 +149,13 @@ bool start_recorder(Call *call, TrunkMessage message, System *sys) {
     call->set_talkgroup_tag("-");
   }
 
-  if (call->get_encrypted() == true || (talkgroup && (talkgroup->mode.compare("E") == 0 || talkgroup->mode.compare("TE") == 0 || talkgroup->mode.compare("DE") == 0))) {
+  if (call->get_encrypted() == true || (talkgroup && (talkgroup->mode == "E" || talkgroup->mode == "TE" || talkgroup->mode == "DE"))) {
     call->set_state(MONITORING);
     call->set_monitoring_state(ENCRYPTED);
     if (sys->get_hideEncrypted() == false) {
-      long unit_id = call->get_current_source_id();
+      const long unit_id = call->get_current_source_id();
       std::string tag = sys->find_unit_tag(unit_id);
-      if (tag != "") {
+      if (!tag.empty()) {
         tag = " (\033[0;34m" + tag + "\033[0m)";
       }
       BOOST_LOG_TRIVIAL(info) << "[" << sys->get_short_name() << "]\t\033[0;34m" << call->get_call_num() << "C\033[0m\tTG: " << call->get_talkgroup_display() << "\tFreq: " << format_freq(call->get_freq()) << "\t\u001b[31mNot Recording: ENCRYPTED\u001b[0m - src: " << unit_id << tag;
@@ -167,9 +163,7 @@ bool start_recorder(Call *call, TrunkMessage message, System *sys) {
     return false;
   }
 
-  for (vector<Source *>::iterator it = sources.begin(); it != sources.end(); it++) {
-    Source *source = *it;
-
+  for (const auto source : sources) {
     if ((source->get_min_hz() <= call->get_freq()) &&
         (source->get_max_hz() >= call->get_freq())) {
       source_found = true;
@@ -177,14 +171,14 @@ bool start_recorder(Call *call, TrunkMessage message, System *sys) {
       if (talkgroup) {
         int priority = talkgroup->get_priority();
         BOOST_FOREACH (auto &TGID, sys->get_talkgroup_patch(call->get_talkgroup())) {
-          if (sys->find_talkgroup(TGID) != NULL) {
+          if (sys->find_talkgroup(TGID) != nullptr) {
             if (sys->find_talkgroup(TGID)->get_priority() < priority) {
               priority = sys->find_talkgroup(TGID)->get_priority();
               BOOST_LOG_TRIVIAL(info) << "Temporarily increased priority of talkgroup " << call->get_talkgroup() << " to " << sys->find_talkgroup(TGID)->get_priority() << " due to active patch with talkgroup " << TGID;
             }
           }
         }
-        if (talkgroup->mode.compare("A") == 0) {
+        if (talkgroup->mode == "A") {
           recorder = source->get_analog_recorder(talkgroup, priority, call);
           call->set_is_analog(true);
         } else {
@@ -206,7 +200,7 @@ bool start_recorder(Call *call, TrunkMessage message, System *sys) {
       // int total_recorders = get_total_recorders();
 
       if (recorder) {
-        if (message.meta.length()) {
+        if (!message.meta.empty()) {
           BOOST_LOG_TRIVIAL(trace) << message.meta;
         }
 
@@ -227,9 +221,7 @@ bool start_recorder(Call *call, TrunkMessage message, System *sys) {
         return false;
       }
 
-      debug_recorder = source->get_debug_recorder();
-
-      if (debug_recorder) {
+      if (Recorder *debug_recorder = source->get_debug_recorder()) {
         debug_recorder->start(call);
         call->set_debug_recorder(debug_recorder);
         call->set_debug_recording(true);
@@ -239,9 +231,7 @@ bool start_recorder(Call *call, TrunkMessage message, System *sys) {
         // BOOST_LOG_TRIVIAL(info) << "\tNot debug recording call";
       }
 
-      sigmf_recorder = source->get_sigmf_recorder();
-
-      if (sigmf_recorder) {
+      if (Recorder *sigmf_recorder = source->get_sigmf_recorder()) {
         sigmf_recorder->start(call);
         call->set_sigmf_recorder(sigmf_recorder);
         call->set_sigmf_recording(true);
@@ -269,11 +259,11 @@ bool start_recorder(Call *call, TrunkMessage message, System *sys) {
 
 // This is to handle the messages that come off the Analog recorder.
 void process_message_queues() {
-  for (std::vector<System *>::iterator it = systems.begin(); it != systems.end(); ++it) {
-    System_impl *sys = (System_impl *)*it;
+  for (const auto & system : systems) {
+    const auto *sys = dynamic_cast<System_impl *>(system);
 
-    for (std::vector<analog_recorder_sptr>::iterator arit = sys->conventional_recorders.begin(); arit != sys->conventional_recorders.end(); ++arit) {
-      analog_recorder_sptr ar = (analog_recorder_sptr)*arit;
+    for (const auto & conventional_recorder : sys->conventional_recorders) {
+      const analog_recorder_sptr& ar = conventional_recorder;
       ar->process_message_queues();
     }
   }
@@ -300,7 +290,7 @@ void manage_conventional_call(Call *call) {
         Recorder *recorder = call->get_recorder();
         call->conclude_call();
         call->restart_call();
-        if (recorder != NULL) {
+        if (recorder != nullptr) {
           plugman_setup_recorder(recorder);
           plugman_call_start(call);
         }
@@ -308,7 +298,7 @@ void manage_conventional_call(Call *call) {
         Recorder *recorder = call->get_recorder();
         call->conclude_call();
         call->restart_call();
-        if (recorder != NULL) {
+        if (recorder != nullptr) {
           plugman_setup_recorder(recorder);
           plugman_call_start(call);
         }
@@ -329,8 +319,7 @@ void manage_conventional_call(Call *call) {
 void print_status() {
   BOOST_LOG_TRIVIAL(info) << "Currently Active Calls: " << calls.size();
 
-  for (vector<Call *>::iterator it = calls.begin(); it != calls.end(); it++) {
-    Call *call = *it;
+  for (auto call : calls) {
     Recorder *recorder = call->get_recorder();
 
     if (call->get_state() == MONITORING) {
@@ -346,14 +335,13 @@ void print_status() {
 
   BOOST_LOG_TRIVIAL(info) << "Recorders: ";
 
-  for (vector<Source *>::iterator it = sources.begin(); it != sources.end(); it++) {
-    Source *source = *it;
+  for (const auto source : sources) {
     source->print_recorders();
   }
 
   BOOST_LOG_TRIVIAL(info) << "Control Channel Decode Rates: ";
-  for (std::vector<System *>::iterator it = systems.begin(); it != systems.end(); ++it) {
-    System_impl *sys = (System_impl *)*it;
+  for (const auto & system : systems) {
+    auto sys = dynamic_cast<System_impl *>(system);
 
     if ((sys->get_system_type() != "conventional") && (sys->get_system_type() != "conventionalP25") && (sys->get_system_type() != "conventionalDMR")) {
       BOOST_LOG_TRIVIAL(info) << "[" << sys->get_short_name() << "] " << sys->get_decode_rate() << " msg/sec";
@@ -363,9 +351,9 @@ void print_status() {
 
 void manage_calls() {
   bool ended_call = false;
-  for (vector<Call *>::iterator it = calls.begin(); it != calls.end();) {
+  for (auto it = calls.begin(); it != calls.end();) {
     Call *call = *it;
-    State state = call->get_state();
+    const State state = call->get_state();
     // Handle Conventional Calls
     if (call->is_conventional()) {
       manage_conventional_call(call);
@@ -393,7 +381,7 @@ void manage_calls() {
         call->conclude_call();
         // The State of the Recorders has changed, so lets send an update
         ended_call = true;
-        if (recorder != NULL) {
+        if (recorder != nullptr) {
           plugman_setup_recorder(recorder);
         }
         it = calls.erase(it);
@@ -414,7 +402,7 @@ void manage_calls() {
 }
 
 void current_system_status(TrunkMessage message, System *sys) {
-  if (sys->update_status(message)) {
+  if (sys->update_status(std::move(message))) {
     plugman_setup_system(sys);
   }
 }
@@ -427,35 +415,35 @@ void current_system_sysid(TrunkMessage message, System *sys) {
   }
 }
 
-void unit_registration(System *sys, long source_id) {
+void unit_registration(System *sys, const long source_id) {
   plugman_unit_registration(sys, source_id);
 }
 
-void unit_deregistration(System *sys, long source_id) {
+void unit_deregistration(System *sys, const long source_id) {
   plugman_unit_deregistration(sys, source_id);
 }
 
-void unit_acknowledge_response(System *sys, long source_id) {
+void unit_acknowledge_response(System *sys, const long source_id) {
   plugman_unit_acknowledge_response(sys, source_id);
 }
 
-void unit_group_affiliation(System *sys, long source_id, long talkgroup_num) {
+void unit_group_affiliation(System *sys, const long source_id, const long talkgroup_num) {
   plugman_unit_group_affiliation(sys, source_id, talkgroup_num);
 }
 
-void unit_data_grant(System *sys, long source_id) {
+void unit_data_grant(System *sys, const long source_id) {
   plugman_unit_data_grant(sys, source_id);
 }
 
-void unit_answer_request(System *sys, long source_id, long talkgroup) {
+void unit_answer_request(System *sys, const long source_id, const long talkgroup) {
   plugman_unit_answer_request(sys, source_id, talkgroup);
 }
 
-void unit_location(System *sys, long source_id, long talkgroup_num) {
+void unit_location(System *sys, const long source_id, const long talkgroup_num) {
   plugman_unit_location(sys, source_id, talkgroup_num);
 }
 
-void handle_call_grant(TrunkMessage message, System *sys, bool grant_message) {
+void handle_call_grant(const TrunkMessage &message, System *sys, const bool grant_message) {
   bool call_found = false;
   bool duplicate_grant = false;
   bool superseding_grant = false;
@@ -501,8 +489,7 @@ void handle_call_grant(TrunkMessage message, System *sys, bool grant_message) {
                 original_call = call;
 
                 unsigned long call_preferredNAC = 0;
-                Talkgroup *call_talkgroup = call->get_system()->find_talkgroup(message.talkgroup);
-                if (call_talkgroup) {
+                if (Talkgroup *call_talkgroup = call->get_system()->find_talkgroup(message.talkgroup)) {
                   call_preferredNAC = call_talkgroup->get_preferredNAC();
                 }
 
@@ -526,8 +513,7 @@ void handle_call_grant(TrunkMessage message, System *sys, bool grant_message) {
                 original_call = call;
 
                 unsigned long call_preferredNAC = 0;
-                Talkgroup *call_talkgroup = call->get_system()->find_talkgroup(message.talkgroup);
-                if (call_talkgroup) {
+                if (Talkgroup *call_talkgroup = call->get_system()->find_talkgroup(message.talkgroup)) {
                   call_preferredNAC = call_talkgroup->get_preferredNAC();
                 }
 
@@ -545,8 +531,7 @@ void handle_call_grant(TrunkMessage message, System *sys, bool grant_message) {
 
     if ((call->get_talkgroup() == message.talkgroup) && (call->get_sys_num() == message.sys_num) && (call->get_freq() == message.freq) && (call->get_tdma_slot() == message.tdma_slot) && (call->get_phase2_tdma() == message.phase2_tdma)) {
       call_found = true;
-      bool source_updated = call->update(message);
-      if (source_updated) {
+      if (call->update(message)) {
         plugman_call_start(call);
       }
     }
@@ -556,21 +541,19 @@ void handle_call_grant(TrunkMessage message, System *sys, bool grant_message) {
     if ((call->get_state() == RECORDING) && (call->get_talkgroup() != message.talkgroup) && (call->get_sys_num() == message.sys_num) && (call->get_freq() == message.freq) && (call->get_tdma_slot() == message.tdma_slot) && (call->get_phase2_tdma() == message.phase2_tdma)) {
       Recorder *recorder = call->get_recorder();
       string recorder_state = "UNKNOWN";
-      if (recorder != NULL) {
+      if (recorder != nullptr) {
         recorder_state = format_state(recorder->get_state());
       }
       BOOST_LOG_TRIVIAL(trace) << "[" << call->get_short_name() << "]\t\033[0;34m" << call->get_call_num() << "C\033[0m\tTG: " << call->get_talkgroup_display() << "\tFreq: " << format_freq(call->get_freq()) << "\t\u001b[36mShould be Stopping RECORDING call, Recorder State: " << recorder_state << " RX overlapping TG message Freq, TG:" << message.talkgroup << "\u001b[0m";
     }
 
-    it++;
+    ++it;
   }
 
   if (!call_found) {
     Call *call = Call::make(message, sys, config);
 
-    Talkgroup *talkgroup = sys->find_talkgroup(call->get_talkgroup());
-
-    if (talkgroup) {
+    if (const Talkgroup *talkgroup = sys->find_talkgroup(call->get_talkgroup())) {
       call->set_talkgroup_tag(talkgroup->alpha_tag);
     } else {
       call->set_talkgroup_tag("-");
@@ -578,14 +561,14 @@ void handle_call_grant(TrunkMessage message, System *sys, bool grant_message) {
 
     boost::format original_call_data;
     boost::format grant_call_data;
-    
+
     if ((superseding_grant) || (duplicate_grant)){
       if (original_call->get_system()->get_multiSiteSystemName() == "") {
         original_call_data = boost::format("\u001b[34m%sC\u001b[0m %X/%s-%s ") % original_call->get_call_num() % original_call->get_system()->get_wacn() % original_call->get_system()->get_sys_rfss() % original_call->get_system()->get_sys_site_id();
         grant_call_data = boost::format("\u001b[34m%sC\u001b[0m %X/%s-%s ") % call->get_call_num() % sys->get_wacn() % sys->get_sys_rfss() % + sys->get_sys_site_id();
       } else {
         original_call_data = boost::format("\u001b[34m%sC\u001b[0m %s/%s ") % original_call->get_call_num() % original_call->get_system()->get_multiSiteSystemName() % original_call->get_system()->get_multiSiteSystemNumber();
-        grant_call_data = boost::format("\u001b[34m%sC\u001b[0m %s/%s ") % call->get_call_num() % sys->get_multiSiteSystemName() % sys->get_multiSiteSystemNumber();        
+        grant_call_data = boost::format("\u001b[34m%sC\u001b[0m %s/%s ") % call->get_call_num() % sys->get_multiSiteSystemName() % sys->get_multiSiteSystemNumber();
       }
     }
 
@@ -618,7 +601,7 @@ void handle_call_grant(TrunkMessage message, System *sys, bool grant_message) {
   }
 }
 
-void handle_call_update(TrunkMessage message, System *sys) {
+void handle_call_update(const TrunkMessage &message, System *sys) {
   bool call_found = false;
 
   /* Notes: it is possible for 2 Calls to exist for the same talkgroup on different freq. This happens when a Talkgroup starts on a freq
@@ -629,14 +612,12 @@ void handle_call_update(TrunkMessage message, System *sys) {
   going until it gets a termination flag.
   */
 
-  for (vector<Call *>::iterator it = calls.begin(); it != calls.end(); ++it) {
-    Call *call = *it;
-
+  for (auto call : calls) {
     // BOOST_LOG_TRIVIAL(info) << "TG: " << call->get_talkgroup() << " | " << message.talkgroup << " sys num: " << call->get_sys_num() << " | " << message.sys_num << " freq: " << call->get_freq() << " | " << message.freq << " TDMA Slot" << call->get_tdma_slot() << " | " << message.tdma_slot << " TDMA: " << call->get_phase2_tdma() << " | " << message.phase2_tdma;
     if ((call->get_talkgroup() == message.talkgroup) && (call->get_sys_num() == message.sys_num) && (call->get_freq() == message.freq) && (call->get_tdma_slot() == message.tdma_slot) && (call->get_phase2_tdma() == message.phase2_tdma)) {
       call_found = true;
 
-      bool source_updated = call->update(message);
+      const bool source_updated = call->update(message);
       if (source_updated) {
         plugman_call_start(call);
       }
@@ -649,10 +630,8 @@ void handle_call_update(TrunkMessage message, System *sys) {
   }
 }
 
-void handle_message(std::vector<TrunkMessage> messages, System *sys) {
-  for (std::vector<TrunkMessage>::iterator it = messages.begin(); it != messages.end(); it++) {
-    TrunkMessage message = *it;
-
+void handle_message(const std::vector<TrunkMessage> &messages, System *sys) {
+  for (const auto& message : messages) {
     switch (message.message_type) {
     case GRANT:
       handle_call_grant(message, sys, true);
@@ -733,11 +712,11 @@ void handle_message(std::vector<TrunkMessage> messages, System *sys) {
   }
 }
 
-System *find_system(int sys_num) {
-  System *sys_match = NULL;
+System *find_system(const int sys_num) {
+  System *sys_match = nullptr;
 
-  for (std::vector<System *>::iterator it = systems.begin(); it != systems.end(); ++it) {
-    System *sys = (System *)*it;
+  for (const auto & system : systems) {
+    System *sys = system;
 
     if (sys->get_sys_num() == sys_num) {
       sys_match = sys;
@@ -745,17 +724,17 @@ System *find_system(int sys_num) {
     }
   }
 
-  if (sys_match == NULL) {
+  if (sys_match == nullptr) {
     BOOST_LOG_TRIVIAL(info) << "Sys is null";
   }
   return sys_match;
 }
 
 void retune_system(System *sys) {
-  System_impl *system = (System_impl *)sys;
+  auto *system = dynamic_cast<System_impl *>(sys);
   bool source_found = false;
   Source *current_source = system->get_source();
-  double control_channel_freq = system->get_next_control_channel();
+  const double control_channel_freq = system->get_next_control_channel();
 
   BOOST_LOG_TRIVIAL(error) << "[" << system->get_short_name() << "] Retuning to Control Channel: " << format_freq(control_channel_freq);
 
@@ -774,9 +753,7 @@ void retune_system(System *sys) {
       BOOST_LOG_TRIVIAL(error) << "\t - Unknown system type for Retune";
     }
   } else {
-    for (vector<Source *>::iterator src_it = sources.begin(); src_it != sources.end(); src_it++) {
-      Source *source = *src_it;
-
+    for (const auto source : sources) {
       if ((source->get_min_hz() <= control_channel_freq) &&
           (source->get_max_hz() >= control_channel_freq)) {
         source_found = true;
@@ -813,15 +790,15 @@ void retune_system(System *sys) {
   }
 }
 
-void check_message_count(float timeDiff) {
+void check_message_count(const float timeDiff) {
   plugman_setup_config(sources, systems);
   plugman_system_rates(systems, timeDiff);
 
-  for (std::vector<System *>::iterator it = systems.begin(); it != systems.end(); ++it) {
-    System_impl *sys = (System_impl *)*it;
+  for (const auto & system : systems) {
+    auto sys = dynamic_cast<System_impl *>(system);
 
     if ((sys->get_system_type() != "conventional") && (sys->get_system_type() != "conventionalP25") && (sys->get_system_type() != "conventionalDMR")) {
-      int msgs_decoded_per_second = std::floor(sys->message_count / timeDiff);
+      const int msgs_decoded_per_second = std::floor(sys->message_count / timeDiff);
       sys->set_decode_rate(msgs_decoded_per_second);
 
       if (msgs_decoded_per_second < 2) {
@@ -860,17 +837,17 @@ void monitor_messages() {
   int sys_num;
   System *sys;
 
-  time_t last_status_time = time(NULL);
-  time_t last_decode_rate_check = time(NULL);
-  time_t management_timestamp = time(NULL);
-  time_t current_time = time(NULL);
+  time_t last_status_time = time(nullptr);
+  time_t last_decode_rate_check = time(nullptr);
+  time_t management_timestamp = time(nullptr);
+  time_t current_time = time(nullptr);
   std::vector<TrunkMessage> trunk_messages;
 
-  while (1) {
+  while (true) {
 
     if (exit_flag) { // my action when signal set it 1
       BOOST_LOG_TRIVIAL(info) << "Caught an Exit Signal...";
-      for (vector<Call *>::iterator it = calls.begin(); it != calls.end();) {
+      for (auto it = calls.begin(); it != calls.end();) {
         Call *call = *it;
 
         if (call->get_state() != MONITORING) {
@@ -892,37 +869,38 @@ void monitor_messages() {
 
     plugman_poll_one();
 
-    for (vector<System *>::iterator sys_it = systems.begin(); sys_it != systems.end(); sys_it++) {
-      System_impl *system = (System_impl *)*sys_it;
+    for (const auto & sys_it : systems) {
+      const auto system = dynamic_cast<System_impl *>(sys_it);
 
-      if ((system->get_system_type() == "p25") || (system->get_system_type() == "smartnet")) {
+      if (system->get_system_type() != "p25" && system->get_system_type() != "smartnet")
+        continue;
+
+      msg.reset();
+      msg = system->get_msg_queue()->delete_head_nowait();
+      while (msg != nullptr) {
+        system->set_message_count(system->get_message_count() + 1);
+
+        if (system->get_system_type() == "smartnet") {
+          trunk_messages = smartnet_parser->parse_message(msg->to_string(), system);
+          handle_message(trunk_messages, system);
+          plugman_trunk_message(trunk_messages, system);
+        }
+
+        if (system->get_system_type() == "p25") {
+          trunk_messages = p25_parser->parse_message(msg, system);
+          handle_message(trunk_messages, system);
+          plugman_trunk_message(trunk_messages, system);
+        }
+
+        if (msg->type() == -1) {
+          BOOST_LOG_TRIVIAL(error) << "[" << system->get_short_name() << "]\t process_data_unit timeout";
+        }
+
         msg.reset();
         msg = system->get_msg_queue()->delete_head_nowait();
-        while (msg != 0) {
-          system->set_message_count(system->get_message_count() + 1);
-
-          if (system->get_system_type() == "smartnet") {
-            trunk_messages = smartnet_parser->parse_message(msg->to_string(), system);
-            handle_message(trunk_messages, system);
-            plugman_trunk_message(trunk_messages, system);
-          }
-
-          if (system->get_system_type() == "p25") {
-            trunk_messages = p25_parser->parse_message(msg, system);
-            handle_message(trunk_messages, system);
-            plugman_trunk_message(trunk_messages, system);
-          }
-
-          if (msg->type() == -1) {
-            BOOST_LOG_TRIVIAL(error) << "[" << system->get_short_name() << "]\t process_data_unit timeout";
-          }
-
-          msg.reset();
-          msg = system->get_msg_queue()->delete_head_nowait();
-        }
       }
     }
-    current_time = time(NULL);
+    current_time = time(nullptr);
 
     if ((current_time - management_timestamp) >= 1.0) {
       manage_calls();
@@ -932,7 +910,7 @@ void monitor_messages() {
 
     boost::this_thread::sleep(boost::posix_time::milliseconds(10));
 
-    float decode_rate_check_time_diff = current_time - last_decode_rate_check;
+    const float decode_rate_check_time_diff = current_time - last_decode_rate_check;
 
     if (decode_rate_check_time_diff >= 3.0) {
       check_message_count(decode_rate_check_time_diff);
@@ -945,7 +923,7 @@ void monitor_messages() {
       }
     }
 
-    float print_status_time_diff = current_time - last_status_time;
+    const float print_status_time_diff = current_time - last_status_time;
 
     if (print_status_time_diff > 200) {
       last_status_time = current_time;
@@ -954,9 +932,9 @@ void monitor_messages() {
   }
 }
 
-bool setup_convetional_channel(System *system, double frequency, long channel_index) {
+bool setup_convetional_channel(System *system, const double frequency, const long channel_index) {
   bool channel_added = false;
-  Source *source = NULL;
+  Source *source = nullptr;
   for (vector<Source *>::iterator src_it = sources.begin(); src_it != sources.end(); src_it++) {
     source = *src_it;
 
@@ -969,9 +947,9 @@ bool setup_convetional_channel(System *system, double frequency, long channel_in
         channel_added = true;
       }
 
-      Call_conventional *call = NULL;
+      Call_conventional *call = nullptr;
       if (system->has_channel_file()) {
-        Talkgroup *tg = system->find_talkgroup_by_freq(frequency);
+        const Talkgroup *tg = system->find_talkgroup_by_freq(frequency);
         call = new Call_conventional(tg->number, tg->freq, system, config);
         call->set_talkgroup_tag(tg->alpha_tag);
       } else {
@@ -1022,9 +1000,9 @@ bool setup_conventional_system(System *system) {
   if (system->has_channel_file()) {
     std::vector<Talkgroup *> talkgroups = system->get_talkgroups();
     for (vector<Talkgroup *>::iterator tg_it = talkgroups.begin(); tg_it != talkgroups.end(); tg_it++) {
-      Talkgroup *tg = *tg_it;
+      const Talkgroup *tg = *tg_it;
 
-      bool channel_added = setup_convetional_channel(system, tg->freq, tg->number);
+      const bool channel_added = setup_convetional_channel(system, tg->freq, tg->number);
 
       if (!channel_added) {
         BOOST_LOG_TRIVIAL(error) << "[" << system->get_short_name() << "]\t Unable to find a source for this conventional channel! Channel not added: " << format_freq(tg->freq) << " Talkgroup: " << tg->number;
@@ -1037,9 +1015,9 @@ bool setup_conventional_system(System *system) {
     std::vector<double> channels = system->get_channels();
     int channel_index = 0;
     for (vector<double>::iterator chan_it = channels.begin(); chan_it != channels.end(); chan_it++) {
-      double channel = *chan_it;
+      const double channel = *chan_it;
       ++channel_index;
-      bool channel_added = setup_convetional_channel(system, channel, channel_index);
+      const bool channel_added = setup_convetional_channel(system, channel, channel_index);
 
       if (!channel_added) {
         BOOST_LOG_TRIVIAL(error) << "[" << system->get_short_name() << "]\t Unable to find a source for this conventional channel! Channel not added: " << format_freq(channel) << " Talkgroup: " << channel_index;
@@ -1054,7 +1032,7 @@ bool setup_conventional_system(System *system) {
 
 bool setup_systems() {
 
-  Source *source = NULL;
+  Source *source = nullptr;
 
   for (vector<System *>::iterator sys_it = systems.begin(); sys_it != systems.end(); sys_it++) {
     System_impl *system = (System_impl *)*sys_it;
@@ -1064,7 +1042,7 @@ bool setup_systems() {
       system_added = setup_conventional_system(system);
     } else {
       // If it's not a conventional system, then it's a trunking system
-      double control_channel_freq = system->get_current_control_channel();
+      const double control_channel_freq = system->get_current_control_channel();
       BOOST_LOG_TRIVIAL(info) << "[" << system->get_short_name() << "]\tStarted with Control Channel: " << format_freq(control_channel_freq);
 
       for (vector<Source *>::iterator src_it = sources.begin(); src_it != sources.end(); src_it++) {
@@ -1112,7 +1090,7 @@ bool setup_systems() {
   return true;
 }
 
-int main(int argc, char **argv) {
+int main(const int argc, char **argv) {
   // BOOST_STATIC_ASSERT(true) __attribute__((unused));
 
   logging::core::get()->set_filter(logging::trivial::severity >= logging::trivial::info);
@@ -1140,7 +1118,7 @@ int main(int argc, char **argv) {
     std::cout << desc;
     exit(0);
   }
-  string config_file = vm["config"].as<string>();
+  const string config_file = vm["config"].as<string>();
 
   tb = gr::make_top_block("Trunking");
 

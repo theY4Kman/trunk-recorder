@@ -327,7 +327,7 @@ Call_Data_t Call_Concluder::create_call_data(Call *call, System *sys, Config con
 
   // loop through the transmission list, pull in things to fill in totals for call_info
   // Using a for loop with iterator
-  for (std::vector<Transmission>::iterator it = call_info.transmission_list.begin(); it != call_info.transmission_list.end();) {
+  for (auto it = call_info.transmission_list.begin(); it != call_info.transmission_list.end();) {
     Transmission t = *it;
 
     if (t.length < sys->get_min_tx_duration()) {
@@ -346,8 +346,8 @@ Call_Data_t Call_Concluder::create_call_data(Call *call, System *sys, Config con
     }
 
     std::string tag = sys->find_unit_tag(t.source);
-    std::string display_tag = "";
-    if (tag != "") {
+    std::string display_tag;
+    if (!tag.empty()) {
       display_tag = " (\033[0;34m" + tag + "\033[0m)";
     }
 

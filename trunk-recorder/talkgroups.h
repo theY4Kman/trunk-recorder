@@ -13,8 +13,8 @@ public:
   Talkgroups();
   void load_talkgroups(int sys_num, std::string filename);
   void load_channels(int sys_num, std::string filename);
-  Talkgroup *find_talkgroup(int sys_num, long tg);
-  Talkgroup *find_talkgroup_by_freq(int sys_num, double freq);
+  [[nodiscard]] Talkgroup *find_talkgroup(int sys_num, long tg) const;
+  [[nodiscard]] Talkgroup *find_talkgroup_by_freq(int sys_num, double freq) const;
   std::vector<Talkgroup *> get_talkgroups();
 };
 #endif // TALKGROUPS_H

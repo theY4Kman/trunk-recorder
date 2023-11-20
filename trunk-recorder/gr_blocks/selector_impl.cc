@@ -23,20 +23,20 @@
 #include "selector_impl.h"
 #include <gnuradio/io_signature.h>
 #include <stdexcept>
-#include <string.h>
+#include <cstring>
 
-namespace gr {
-namespace blocks {
+
+namespace gr::blocks {
 
 selector::sptr
-selector::make(size_t itemsize, unsigned int input_index, unsigned int output_index) {
+selector::make(const size_t itemsize, const unsigned int input_index, const unsigned int output_index) {
   return gnuradio::get_initial_sptr(
       new selector_impl(itemsize, input_index, output_index));
 }
 
-selector_impl::selector_impl(size_t itemsize,
-                             unsigned int input_index,
-                             unsigned int output_index)
+selector_impl::selector_impl(const size_t itemsize,
+                             const unsigned int input_index,
+                             const unsigned int output_index)
     : block("selector",
             io_signature::make(1, -1, itemsize),
             io_signature::make(1, -1, itemsize)),
@@ -47,18 +47,18 @@ selector_impl::selector_impl(size_t itemsize,
       d_num_inputs(0),
       d_num_outputs(0) {
   message_port_register_in(pmt::mp("en"));
-  set_msg_handler(pmt::mp("en"), boost::bind(&selector_impl::handle_enable, this, boost::placeholders::_1));
+  set_msg_handler(pmt::mp("en"), boost::bind(&selector_impl::handle_enable, this, _1));
 
   // TODO: add message ports for input_index and output_index
 }
 
-selector_impl::~selector_impl() {}
+selector_impl::~selector_impl() = default;
 
-void selector_impl::set_input_index(unsigned int input_index) {
-  gr::thread::scoped_lock l(d_mutex);
+void selector_impl::set_input_index(const unsigned int input_index) {
+  thread::scoped_lock l(d_mutex);
 
-  if (input_index < 0)
-    throw std::out_of_range("input_index must be >= 0");
+  // if (input_index < 0)
+  //   throw std::out_of_range("input_index must be >= 0");
 
   if (input_index < d_num_inputs)
     d_input_index = input_index;
@@ -66,11 +66,11 @@ void selector_impl::set_input_index(unsigned int input_index) {
     throw std::out_of_range("input_index must be < ninputs");
 }
 
-void selector_impl::set_output_index(unsigned int output_index) {
-  gr::thread::scoped_lock l(d_mutex);
+void selector_impl::set_output_index(const unsigned int output_index) {
+  thread::scoped_lock l(d_mutex);
 
-  if (output_index < 0)
-    throw std::out_of_range("input_index must be >= 0");
+  // if (output_index < 0)
+  //   throw std::out_of_range("input_index must be >= 0");
 
   if (output_index < d_num_outputs)
     d_output_index = output_index;
@@ -78,10 +78,10 @@ void selector_impl::set_output_index(unsigned int output_index) {
     throw std::out_of_range("output_index must be < noutputs");
 }
 
-void selector_impl::handle_enable(pmt::pmt_t msg) {
-  if (pmt::is_bool(msg)) {
-    bool en = pmt::to_bool(msg);
-    gr::thread::scoped_lock l(d_mutex);
+void selector_impl::handle_enable(const pmt::pmt_t &msg) {
+  if (is_bool(msg)) {
+    const bool en = to_bool(msg);
+    thread::scoped_lock l(d_mutex);
     d_enabled = en;
   } else {
     GR_LOG_WARN(d_logger,
@@ -89,17 +89,17 @@ void selector_impl::handle_enable(pmt::pmt_t msg) {
   }
 }
 
-void selector_impl::forecast(int noutput_items, gr_vector_int &ninput_items_required) {
-  unsigned ninputs = ninput_items_required.size();
+void selector_impl::forecast(const int noutput_items, gr_vector_int &ninput_items_required) {
+  const unsigned ninputs = ninput_items_required.size();
   for (unsigned i = 0; i < ninputs; i++) {
     ninput_items_required[i] = noutput_items;
   }
 }
 
-bool selector_impl::check_topology(int ninputs, int noutputs) {
-  if ((int)d_input_index < ninputs && (int)d_output_index < noutputs) {
-    d_num_inputs = (unsigned int)ninputs;
-    d_num_outputs = (unsigned int)noutputs;
+bool selector_impl::check_topology(const int ninputs, const int noutputs) {
+  if (static_cast<int>(d_input_index) < ninputs && static_cast<int>(d_output_index) < noutputs) {
+    d_num_inputs = static_cast<unsigned int>(ninputs);
+    d_num_outputs = static_cast<unsigned int>(noutputs);
     return true;
   } else {
     GR_LOG_WARN(d_logger,
@@ -108,14 +108,14 @@ bool selector_impl::check_topology(int ninputs, int noutputs) {
   }
 }
 
-int selector_impl::general_work(int noutput_items,
+int selector_impl::general_work(const int noutput_items,
                                 gr_vector_int &ninput_items,
                                 gr_vector_const_void_star &input_items,
                                 gr_vector_void_star &output_items) {
-  const uint8_t **in = (const uint8_t **)&input_items[0];
-  uint8_t **out = (uint8_t **)&output_items[0];
+  const auto **in = reinterpret_cast<const uint8_t **>(&input_items[0]);
+  const auto out = reinterpret_cast<uint8_t **>(&output_items[0]);
 
-  gr::thread::scoped_lock l(d_mutex);
+  thread::scoped_lock l(d_mutex);
   if (d_enabled) {
     std::copy(in[d_input_index],
               in[d_input_index] + noutput_items * d_itemsize,
@@ -134,5 +134,5 @@ void selector_impl::setup_rpc() {
 #endif /* GR_CTRLPORT */
 }
 
-} /* namespace blocks */
-} /* namespace gr */
+} // namespace gr::blocks
+

@@ -14,12 +14,12 @@
 #include <fstream>
 #include <iostream>
 
-Talkgroups::Talkgroups() {}
+Talkgroups::Talkgroups() = default;
 
 using namespace csv;
 
 void Talkgroups::load_talkgroups(int sys_num, std::string filename) {
-  if (filename == "") {
+  if (filename.empty()) {
     return;
   } else {
     BOOST_LOG_TRIVIAL(info) << "Reading Talkgroup CSV File: " << filename;
@@ -42,9 +42,9 @@ void Talkgroups::load_talkgroups(int sys_num, std::string filename) {
     BOOST_LOG_TRIVIAL(info) << "Found Columns: " << internals::format_row(reader.get_col_names(), ", ");
   }
 
-  for (int i = 0; i < headers.size(); i++) {
-    if (find(defined_headers.begin(), defined_headers.end(), headers[i]) == defined_headers.end()) {
-      BOOST_LOG_TRIVIAL(error) << "Unknown column header: " << headers[i];
+  for (auto & header : headers) {
+    if (find(defined_headers.begin(), defined_headers.end(), header) == defined_headers.end()) {
+      BOOST_LOG_TRIVIAL(error) << "Unknown column header: " << header;
       BOOST_LOG_TRIVIAL(error) << "Required columns are: 'Decimal', 'Mode', 'Description'";
       BOOST_LOG_TRIVIAL(error) << "Optional columns are: 'Alpha Tag', 'Hex', 'Category', 'Tag', 'Priority', 'Preferred NAC'";
       exit(0);
@@ -53,15 +53,15 @@ void Talkgroups::load_talkgroups(int sys_num, std::string filename) {
 
   long lines_pushed = 0;
   for (CSVRow &row : reader) { // Input iterator
-    Talkgroup *tg = NULL;
+    Talkgroup *tg;
     int priority = 1;
     unsigned long preferredNAC = 0;
-    long tg_number = 0;
-    std::string alpha_tag = "";
-    std::string description = "";
-    std::string tag = "";
-    std::string group = "";
-    std::string mode = "";
+    long tg_number;
+    std::string alpha_tag;
+    std::string description;
+    std::string tag;
+    std::string group;
+    std::string mode;
 
     if ((reader.index_of("Decimal") >= 0) && !row["Decimal"].is_null() && row["Decimal"].is_int()) {
       tg_number = row["Decimal"].get<long>();
@@ -114,12 +114,11 @@ void Talkgroups::load_talkgroups(int sys_num, std::string filename) {
 }
 
 void Talkgroups::load_channels(int sys_num, std::string filename) {
-
-  if (filename == "") {
+  if (filename.empty()) {
     return;
-  } else {
-    BOOST_LOG_TRIVIAL(info) << "Reading Channel CSV File: " << filename;
   }
+
+  BOOST_LOG_TRIVIAL(info) << "Reading Channel CSV File: " << filename;
 
   CSVFormat format;
   format.trim({' ', '\t'});
@@ -138,9 +137,9 @@ void Talkgroups::load_channels(int sys_num, std::string filename) {
     BOOST_LOG_TRIVIAL(info) << "Found Columns: " << internals::format_row(reader.get_col_names(), ", ");
   }
 
-  for (int i = 0; i < headers.size(); i++) {
-    if (find(defined_headers.begin(), defined_headers.end(), headers[i]) == defined_headers.end()) {
-      BOOST_LOG_TRIVIAL(error) << "Unknown column header: " << headers[i];
+  for (auto & header : headers) {
+    if (find(defined_headers.begin(), defined_headers.end(), header) == defined_headers.end()) {
+      BOOST_LOG_TRIVIAL(error) << "Unknown column header: " << header;
       BOOST_LOG_TRIVIAL(error) << "Required columns are: 'TG Number', 'Tone', 'Frequency',";
       BOOST_LOG_TRIVIAL(error) << "Optional columns are: 'Alpha Tag', 'Description', 'Category', 'Tag', 'Enable', 'Comment'";
       exit(0);
@@ -149,14 +148,12 @@ void Talkgroups::load_channels(int sys_num, std::string filename) {
 
   long lines_pushed = 0;
   for (CSVRow &row : reader) { // Input iterator
-    Talkgroup *tg = NULL;
-    int priority = 1;
-    unsigned long preferredNAC = 0;
-    long tg_number = 0;
-    std::string alpha_tag = "";
-    std::string description = "";
-    std::string tag = "";
-    std::string group = "";
+    Talkgroup *tg;
+    long tg_number;
+    std::string alpha_tag;
+    std::string description;
+    std::string tag;
+    std::string group;
     double freq = 0;
     double tone = 0;
     bool enable = true;
@@ -211,28 +208,24 @@ void Talkgroups::load_channels(int sys_num, std::string filename) {
   }
 }
 
-Talkgroup *Talkgroups::find_talkgroup(int sys_num, long tg_number) {
-  Talkgroup *tg_match = NULL;
+Talkgroup *Talkgroups::find_talkgroup(const int sys_num, const long tg) const {
+  Talkgroup *tg_match = nullptr;
 
-  for (std::vector<Talkgroup *>::iterator it = talkgroups.begin(); it != talkgroups.end(); ++it) {
-    Talkgroup *tg = (Talkgroup *)*it;
-
-    if ((tg->sys_num == sys_num) && (tg->number == tg_number)) {
-      tg_match = tg;
+  for (const auto talkgroup : talkgroups) {
+    if ((talkgroup->sys_num == sys_num) && (talkgroup->number == tg)) {
+      tg_match = talkgroup;
       break;
     }
   }
   return tg_match;
 }
 
-Talkgroup *Talkgroups::find_talkgroup_by_freq(int sys_num, double freq) {
-  Talkgroup *tg_match = NULL;
+Talkgroup *Talkgroups::find_talkgroup_by_freq(const int sys_num, const double freq) const {
+  Talkgroup *tg_match = nullptr;
 
-  for (std::vector<Talkgroup *>::iterator it = talkgroups.begin(); it != talkgroups.end(); ++it) {
-    Talkgroup *tg = (Talkgroup *)*it;
-
-    if ((tg->sys_num == sys_num) && (tg->freq == freq)) {
-      tg_match = tg;
+  for (const auto talkgroup : talkgroups) {
+    if ((talkgroup->sys_num == sys_num) && (talkgroup->freq == freq)) {
+      tg_match = talkgroup;
       break;
     }
   }

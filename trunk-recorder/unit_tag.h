@@ -11,7 +11,7 @@ public:
   boost::regex pattern;
   std::string tag;
 
-  UnitTag(std::string p, std::string t);
+  UnitTag(const std::string& p, const std::string& t);
 };
 
 #endif // UNIT_TAG_H

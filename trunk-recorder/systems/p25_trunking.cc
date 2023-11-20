@@ -2,8 +2,8 @@
 #include "p25_trunking.h"
 #include <boost/log/trivial.hpp>
 
-p25_trunking_sptr make_p25_trunking(double freq, double center, long s, gr::msg_queue::sptr queue, bool qpsk, int sys_num) {
-  return gnuradio::get_initial_sptr(new p25_trunking(freq, center, s, queue, qpsk, sys_num));
+p25_trunking_sptr make_p25_trunking(const double f, const double c, const long s, const gr::msg_queue::sptr &queue, const bool qpsk, const int sys_num) {
+  return gnuradio::get_initial_sptr(new p25_trunking(f, c, s, queue, qpsk, sys_num));
 }
 
 void p25_trunking::generate_arb_taps() {
@@ -17,10 +17,10 @@ void p25_trunking::generate_arb_taps() {
   // width of 0.5.  If rate < 1, we need to filter to less
   // than half the output signal's bw to avoid aliasing, so
   // the half-band here is 0.5*rate.
-  double percent = 0.80;
+  constexpr double percent = 0.80;
 
   if (arb_rate <= 1) {
-    double halfband = 0.5 * arb_rate;
+    const double halfband = 0.5 * arb_rate;
     double bw = percent * halfband;
     double tb = (percent / 2.0) * halfband;
 
@@ -40,16 +40,15 @@ void p25_trunking::generate_arb_taps() {
   }
 }
 
-p25_trunking::DecimSettings p25_trunking::get_decim(long speed) {
-  long s = speed;
+p25_trunking::DecimSettings p25_trunking::get_decim(const long speed) {
+  const long s = speed;
   long if_freqs[] = {24000, 25000, 32000};
   DecimSettings decim_settings = {-1, -1};
-  for (int i = 0; i < 3; i++) {
-    long if_freq = if_freqs[i];
+  for (const long if_freq : if_freqs) {
     if (s % if_freq != 0) {
       continue;
     }
-    long q = s / if_freq;
+    const long q = s / if_freq;
     if (q & 1) {
       continue;
     }
@@ -68,7 +67,7 @@ p25_trunking::DecimSettings p25_trunking::get_decim(long speed) {
   return decim_settings;
 }
 void p25_trunking::initialize_prefilter() {
-  double phase1_channel_rate = phase1_symbol_rate * phase1_samples_per_symbol;
+  const double phase1_channel_rate = phase1_symbol_rate * phase1_samples_per_symbol;
   long if_rate = phase1_channel_rate;
   long fa = 0;
   long fb = 0;
@@ -81,7 +80,7 @@ void p25_trunking::initialize_prefilter() {
   lo = gr::analog::sig_source_c::make(input_rate, gr::analog::GR_SIN_WAVE, 0, 1.0, 0.0);
   mixer = gr::blocks::multiply_cc::make();
 
-  DecimSettings decim_settings = get_decim(input_rate);
+  const DecimSettings decim_settings = get_decim(input_rate);
   if (decim_settings.decim != -1) {
     double_decim = true;
     decim = decim_settings.decim;
@@ -132,9 +131,9 @@ void p25_trunking::initialize_prefilter() {
   arb_resampler = gr::filter::pfb_arb_resampler_ccf::make(arb_rate, arb_taps);
   BOOST_LOG_TRIVIAL(info) << "\t P25 Trunking ARB - Initial Rate: " << input_rate << " Resampled Rate: " << resampled_rate << " Initial Decimation: " << decim << " System Rate: " << system_channel_rate << " ARB Rate: " << arb_rate;
 
-  double sps = phase1_samples_per_symbol;
-  double def_excess_bw = 0.2;
-  const double pi = M_PI;
+  const double sps = phase1_samples_per_symbol;
+  constexpr double def_excess_bw = 0.2;
+  constexpr double pi = M_PI;
   
   rms_agc = gr::blocks::rms_agc::make(0.45, 0.85);
   //rms_agc = gr::op25_repeater::rmsagc_ff::make(0.45, 0.85);
@@ -162,13 +161,13 @@ void p25_trunking::initialize_fsk4() {
 
   double phase1_channel_rate = phase1_symbol_rate * phase1_samples_per_symbol;
   // double phase2_channel_rate = phase2_symbol_rate * phase2_samples_per_symbol;
-  const double pi = M_PI;
+  constexpr double pi = M_PI;
 
   // FSK4: Phase Loop Lock - can only be Phase 1, so locking at that rate.
-  double freq_to_norm_radians = pi / (phase1_channel_rate / 2.0);
-  double fc = 0.0;
-  double fd = 600.0;
-  double pll_demod_gain = 1.0 / (fd * freq_to_norm_radians);
+  const double freq_to_norm_radians = pi / (phase1_channel_rate / 2.0);
+  constexpr double fc = 0.0;
+  constexpr double fd = 600.0;
+  const double pll_demod_gain = 1.0 / (fd * freq_to_norm_radians);
   pll_freq_lock = gr::analog::pll_freqdet_cf::make((phase1_symbol_rate / 2.0 * 1.2) * freq_to_norm_radians, (fc + (3 * fd * 1.9)) * freq_to_norm_radians, (fc + (-3 * fd * 1.9)) * freq_to_norm_radians);
   pll_amp = gr::blocks::multiply_const_ff::make(pll_demod_gain * 1.0); // source->get_());
 
@@ -182,7 +181,7 @@ void p25_trunking::initialize_fsk4() {
   noise_filter = gr::filter::fft_filter_fff::make(1.0, baseband_noise_filter_taps);
 
   // FSK4: Symbol Taps
-  double symbol_decim = 1;
+  constexpr double symbol_decim = 1;
   for (int i = 0; i < samples_per_symbol; i++) {
     sym_taps.push_back(1.0 / samples_per_symbol);
   }
@@ -201,15 +200,15 @@ void p25_trunking::initialize_fsk4() {
 }
 
 void p25_trunking::initialize_qpsk() {
-  const double pi = M_PI;
+  constexpr double pi = M_PI;
 
   agc = gr::analog::feedforward_agc_cc::make(16, 1.0);
 
   // Gardner Costas Clock
-  double gain_mu = 0.025; // 0.025
-  double costas_alpha = 0.008;
-  double omega = double(system_channel_rate) / symbol_rate; // set to 6000 for TDMA, should be symbol_rate
-  double gain_omega = 0.1 * gain_mu * gain_mu;
+  constexpr double gain_mu = 0.025; // 0.025
+  constexpr double costas_alpha = 0.008;
+  const double omega = static_cast<double>(system_channel_rate) / symbol_rate; // set to 6000 for TDMA, should be symbol_rate
+  constexpr double gain_omega = 0.1 * gain_mu * gain_mu;
   double fmax = 3000; // Hz
   fmax = 2 * pi * fmax / double(system_channel_rate);
 
@@ -238,10 +237,10 @@ void p25_trunking::initialize_qpsk() {
 
 void p25_trunking::initialize_p25() {
   // OP25 Slicer
-  const float l[] = {-2.0, 0.0, 2.0, 4.0};
-  const int msgq_id = 0;
-  const int debug = 0;
-  std::vector<float> slices(l, l + sizeof(l) / sizeof(l[0]));
+  constexpr float l[] = {-2.0, 0.0, 2.0, 4.0};
+  constexpr int msgq_id = 0;
+  constexpr int debug = 0;
+  std::vector slices(l, l + std::size(l));
 
   slicer = gr::op25_repeater::fsk4_slicer_fb::make(msgq_id, debug, slices);
 
@@ -249,23 +248,23 @@ void p25_trunking::initialize_p25() {
   traffic_queue = gr::msg_queue::make(2);
   tune_queue = gr::msg_queue::make(2);
 
-  int udp_port = 0;
-  int verbosity = 0;
+  constexpr int udp_port = 0;
+  constexpr int verbosity = 0;
   const char *wireshark_host = "0";
-  bool do_imbe = 0;
-  int silence_frames = 0;
-  bool do_output = 0;
-  bool do_msgq = 1;
-  bool do_audio_output = 0;
-  bool do_tdma = 0;
-  bool do_nocrypt = 1;
-  bool soft_vocoder = false;
+  constexpr bool do_imbe = false;
+  constexpr int silence_frames = 0;
+  constexpr bool do_output = false;
+  constexpr bool do_msgq = true;
+  constexpr bool do_audio_output = false;
+  constexpr bool do_tdma = false;
+  constexpr bool do_nocrypt = true;
+  constexpr bool soft_vocoder = false;
   op25_frame_assembler = gr::op25_repeater::p25_frame_assembler::make(silence_frames, soft_vocoder, wireshark_host, udp_port, verbosity, do_imbe, do_output, do_msgq, rx_queue, do_audio_output, do_tdma, do_nocrypt);
 
   connect(slicer, 0, op25_frame_assembler, 0);
 }
 
-p25_trunking::p25_trunking(double f, double c, long s, gr::msg_queue::sptr queue, bool qpsk, int sys_num)
+p25_trunking::p25_trunking(const double f, const double c, const long s, gr::msg_queue::sptr queue, const bool qpsk, const int sys_num)
     : gr::hier_block2("p25_trunking",
                       gr::io_signature::make(1, 1, sizeof(gr_complex)),
                       gr::io_signature::make(0, 0, sizeof(float))) {
@@ -289,30 +288,29 @@ p25_trunking::p25_trunking(double f, double c, long s, gr::msg_queue::sptr queue
   tune_freq(chan_freq);
 }
 
-p25_trunking::~p25_trunking() {}
+p25_trunking::~p25_trunking() = default;
 
-void p25_trunking::set_center(double c) {
+void p25_trunking::set_center(const double c) {
   center_freq = c;
 }
 
-void p25_trunking::set_rate(long s) {
+void p25_trunking::set_rate(const long s) {
   input_rate = s;
   // TODO: Update/remake blocks that depend on input_rate
 }
 
-double p25_trunking::get_freq() {
+double p25_trunking::get_freq() const {
   return chan_freq;
 }
 
-void p25_trunking::tune_freq(double f) {
+void p25_trunking::tune_freq(const double f) {
   chan_freq = f;
-  int offset_amount = (center_freq - f);
+  const int offset_amount = (center_freq - f);
   tune_offset(offset_amount);
 }
 
-void p25_trunking::tune_offset(double f) {
-
-  float freq = static_cast<float>(f);
+void p25_trunking::tune_offset(const double f) {
+  const auto freq = static_cast<float>(f);
 
   if (abs(freq) > ((input_rate / 2) - (if1 / 2))) {
     BOOST_LOG_TRIVIAL(info) << "Tune Offset: Freq exceeds limit: " << abs(freq) << " compared to: " << ((input_rate / 2) - (if1 / 2));
@@ -320,7 +318,7 @@ void p25_trunking::tune_offset(double f) {
   if (double_decim) {
     bandpass_filter_coeffs = gr::filter::firdes::complex_band_pass(1.0, input_rate, -freq - if1 / 2, -freq + if1 / 2, if1 / 2);
     bandpass_filter->set_taps(bandpass_filter_coeffs);
-    float bfz = (static_cast<float>(decim) * -freq) / (float)input_rate;
+    float bfz = (static_cast<float>(decim) * -freq) / static_cast<float>(input_rate);
     bfz = bfz - static_cast<int>(bfz);
     if (bfz < -0.5) {
       bfz = bfz + 1.0;

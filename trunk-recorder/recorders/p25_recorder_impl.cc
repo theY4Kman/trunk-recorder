@@ -21,10 +21,10 @@ void p25_recorder_impl::generate_arb_taps() {
   // width of 0.5.  If rate < 1, we need to filter to less
   // than half the output signal's bw to avoid aliasing, so
   // the half-band here is 0.5*rate.
-  double percent = 0.80;
+  const double percent = 0.80;
 
   if (arb_rate <= 1) {
-    double halfband = 0.5 * arb_rate;
+    const double halfband = 0.5 * arb_rate;
     double bw = percent * halfband;
     double tb = (percent / 2.0) * halfband;
 
@@ -53,15 +53,14 @@ p25_recorder_impl::p25_recorder_impl(Source *src, Recorder_Type type)
 }
 
 p25_recorder_impl::DecimSettings p25_recorder_impl::get_decim(long speed) {
-  long s = speed;
+  const long s = speed;
   long if_freqs[] = {24000, 25000, 32000};
   DecimSettings decim_settings = {-1, -1};
-  for (int i = 0; i < 3; i++) {
-    long if_freq = if_freqs[i];
+  for (const long if_freq : if_freqs) {
     if (s % if_freq != 0) {
       continue;
     }
-    long q = s / if_freq;
+    const long q = s / if_freq;
     if (q & 1) {
       continue;
     }
@@ -80,7 +79,7 @@ p25_recorder_impl::DecimSettings p25_recorder_impl::get_decim(long speed) {
   return decim_settings;
 }
 void p25_recorder_impl::initialize_prefilter() {
-  double phase1_channel_rate = phase1_symbol_rate * phase1_samples_per_symbol;
+  const double phase1_channel_rate = phase1_symbol_rate * phase1_samples_per_symbol;
   long if_rate = phase1_channel_rate;
   long fa = 0;
   long fb = 0;
@@ -93,7 +92,7 @@ void p25_recorder_impl::initialize_prefilter() {
   lo = gr::analog::sig_source_c::make(input_rate, gr::analog::GR_SIN_WAVE, 0, 1.0, 0.0);
   mixer = gr::blocks::multiply_cc::make();
 
-  p25_recorder_impl::DecimSettings decim_settings = get_decim(input_rate);
+  const p25_recorder_impl::DecimSettings decim_settings = get_decim(input_rate);
   if (decim_settings.decim != -1) {
     double_decim = true;
     decim = decim_settings.decim;
@@ -141,8 +140,8 @@ void p25_recorder_impl::initialize_prefilter() {
   arb_rate = if_rate / resampled_rate;
   generate_arb_taps();
   arb_resampler = gr::filter::pfb_arb_resampler_ccf::make(arb_rate, arb_taps);
-  double sps = floor(resampled_rate / phase1_symbol_rate);
-  double def_excess_bw = 0.2;
+  const double sps = floor(resampled_rate / phase1_symbol_rate);
+  constexpr double def_excess_bw = 0.2;
   BOOST_LOG_TRIVIAL(info) << "\t P25 Recorder ARB - Initial Rate: " << input_rate << " Resampled Rate: " << resampled_rate << " Initial Decimation: " << decim << " ARB Rate: " << arb_rate << " SPS: " << sps;
 
    // Squelch DB
@@ -198,10 +197,10 @@ void p25_recorder_impl::initialize(Source *src) {
 
   state = INACTIVE;
 
-  timestamp = time(NULL);
-  starttime = time(NULL);
+  timestamp = time(nullptr);
+  starttime = time(nullptr);
 
-  if (config == NULL) {
+  if (config == nullptr) {
     this->set_enable_audio_streaming(false);
   } else {
     this->set_enable_audio_streaming(config->enable_audio_streaming);
@@ -228,10 +227,10 @@ void p25_recorder_impl::initialize(Source *src) {
 }
 
 void p25_recorder_impl::switch_tdma(bool phase2) {
-  double phase1_channel_rate = phase1_symbol_rate * phase1_samples_per_symbol;
-  double phase2_channel_rate = phase2_symbol_rate * phase2_samples_per_symbol;
+  const double phase1_channel_rate = phase1_symbol_rate * phase1_samples_per_symbol;
+  const double phase2_channel_rate = phase2_symbol_rate * phase2_samples_per_symbol;
 
-  long if_rate = phase1_channel_rate;
+  long if_rate;
 
   if (phase2) {
     d_phase2_tdma = true;
@@ -243,7 +242,7 @@ void p25_recorder_impl::switch_tdma(bool phase2) {
     fll_band_edge->set_samples_per_symbol(phase1_samples_per_symbol);
   }
 
-  arb_rate = if_rate / double(resampled_rate);
+  arb_rate = if_rate / resampled_rate;
   generate_arb_taps();
   arb_resampler->set_rate(arb_rate);
   arb_resampler->set_taps(arb_taps);
@@ -262,10 +261,9 @@ void p25_recorder_impl::set_tdma(bool phase2) {
   }
 }
 
-void p25_recorder_impl::reset_block(gr::basic_block_sptr block) {
-  gr::block_detail_sptr detail;
-  gr::block_sptr grblock = cast_to_block_sptr(block);
-  detail = grblock->detail();
+void p25_recorder_impl::reset_block(const gr::basic_block_sptr &block) {
+  const gr::block_sptr grblock = cast_to_block_sptr(block);
+  const gr::block_detail_sptr detail = grblock->detail();
   detail->reset_nitem_counters();
 }
 void p25_recorder_impl::clear() {
@@ -317,17 +315,19 @@ void p25_recorder_impl::autotune() {
   }*/
 }
 
-int p25_recorder_impl::get_freq_error() {   // get frequency error from FLL and convert to Hz
-  const float pi = M_PI;
-  double phase1_channel_rate = phase1_symbol_rate * phase1_samples_per_symbol;
-  double phase2_channel_rate = phase2_symbol_rate * phase2_samples_per_symbol;
+int p25_recorder_impl::get_freq_error() const {   // get frequency error from FLL and convert to Hz
+  constexpr float pi = M_PI;
+  const double phase1_channel_rate = phase1_symbol_rate * phase1_samples_per_symbol;
+  const double phase2_channel_rate = phase2_symbol_rate * phase2_samples_per_symbol;
+
   long if_rate;
   if (d_phase2_tdma) {
     if_rate = phase2_channel_rate;
   } else {
     if_rate = phase1_channel_rate;
   }
-        return int((fll_band_edge->get_frequency() / (2*pi)) * if_rate);
+
+  return static_cast<int>((fll_band_edge->get_frequency() / (2 * pi)) * if_rate);
 }
 
 Source *p25_recorder_impl::get_source() {
@@ -394,21 +394,20 @@ double p25_recorder_impl::get_current_length() {
 }
 
 int p25_recorder_impl::lastupdate() {
-  return time(NULL) - timestamp;
+  return time(nullptr) - timestamp;
 }
 
 long p25_recorder_impl::elapsed() {
-  return time(NULL) - starttime;
+  return time(nullptr) - starttime;
 }
 
 void p25_recorder_impl::tune_freq(double f) {
   chan_freq = f;
-  float freq = (center_freq - f);
+  const float freq = (center_freq - f);
   tune_offset(freq);
 }
 void p25_recorder_impl::tune_offset(double f) {
-
-  float freq = static_cast<float>(f);
+  const auto freq = static_cast<float>(f);
 
   if (abs(freq) > ((input_rate / 2) - (if1 / 2))) {
     BOOST_LOG_TRIVIAL(info) << "Tune Offset: Freq exceeds limit: " << abs(freq) << " compared to: " << ((input_rate / 2) - (if1 / 2));
@@ -478,7 +477,7 @@ void p25_recorder_impl::stop() {
   }
 }
 
-void p25_recorder_impl::set_tdma_slot(int slot) {
+void p25_recorder_impl::set_tdma_slot(const int slot) {
   if (qpsk_mod) {
     qpsk_p25_decode->set_tdma_slot(slot);
   } else {
@@ -509,8 +508,8 @@ bool p25_recorder_impl::start(Call *call) {
       set_tdma_slot(0);
     }
 
-    timestamp = time(NULL);
-    starttime = time(NULL);
+    timestamp = time(nullptr);
+    starttime = time(nullptr);
 
     talkgroup = call->get_talkgroup();
     short_name = call->get_short_name();
@@ -522,7 +521,7 @@ bool p25_recorder_impl::start(Call *call) {
 
     BOOST_LOG_TRIVIAL(info) << "[" << call->get_short_name() << "]\t\033[0;34m" << call->get_call_num() << "C\033[0m\tTG: " << this->call->get_talkgroup_display() << "\tFreq: " << format_freq(chan_freq) << "\t\u001b[32mStarting P25 Recorder Num [" << rec_num << "]\u001b[0m\tTDMA: " << call->get_phase2_tdma() << "\tSlot: " << call->get_tdma_slot() << "\tQPSK: " << qpsk_mod;
 
-    int offset_amount = (center_freq - chan_freq);
+    const int offset_amount = (center_freq - chan_freq);
 
     tune_offset(offset_amount);
     if (qpsk_mod) {

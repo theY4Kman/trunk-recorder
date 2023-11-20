@@ -43,7 +43,7 @@ class p25_recorder_decode : public gr::hier_block2 {
 protected:
   virtual void initialize(int silence_frames, bool d_soft_vocoder);
   Recorder *d_recorder;
-  Call *d_call;
+  Call *d_call{};
   gr::op25_repeater::p25_frame_assembler::sptr op25_frame_assembler;
   gr::msg_queue::sptr traffic_queue;
   gr::msg_queue::sptr rx_queue;
@@ -54,24 +54,24 @@ protected:
   gr::blocks::plugin_wrapper::sptr plugin_sink;
 
 public:
-  p25_recorder_decode(Recorder *recorder);
+  explicit p25_recorder_decode(Recorder *recorder);
   void set_tdma_slot(int slot);
-  std::vector<Transmission> get_transmission_list();
-  void set_source(long src);
-  void set_xor_mask(const char *mask);
-  void switch_tdma(bool phase2_tdma);
+  std::vector<Transmission> get_transmission_list() const;
+  void set_source(long src) const;
+  void set_xor_mask(const char *mask) const;
+  void switch_tdma(bool phase2_tdma) const;
   void start(Call *call);
-  double since_last_write();
+  double since_last_write() const;
   void stop();
-  void reset();
-  void reset_block(gr::basic_block_sptr block); 
-  int tdma_slot;
-  bool delay_open;
-  virtual ~p25_recorder_decode();
-  double get_current_length();
-  void plugin_callback_handler(int16_t *samples, int sampleCount);
-  double get_output_sample_rate();
-  State get_state();
+  void reset() const;
+  static void reset_block(const gr::basic_block_sptr &block);
+  int tdma_slot{};
+  bool delay_open{};
+  ~p25_recorder_decode() override;
+  double get_current_length() const;
+  void plugin_callback_handler(int16_t *samples, int sampleCount) const;
+  static double get_output_sample_rate();
+  State get_state() const;
   gr::op25_repeater::p25_frame_assembler::sptr get_transmission_sink();
 
 };

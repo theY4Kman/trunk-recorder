@@ -77,35 +77,35 @@ protected:
 
 public:
   p25_recorder_impl(Source *src, Recorder_Type type);
-  DecimSettings get_decim(long speed);
+  DecimSettings get_decim(long speed) override;
   void initialize_prefilter();
   void initialize_qpsk();
   void initialize_fsk4();
   void initialize_p25();
-  void tune_offset(double f);
-  void tune_freq(double f);
-  bool start(Call *call);
-  void stop();
-  void clear();
-  double get_freq();
-  int get_num();
-  int get_freq_error();
-  void set_tdma(bool phase2);
-  void switch_tdma(bool phase2);
-  void set_tdma_slot(int slot);
-  void set_source(long src);
-  double since_last_write();
+  void tune_offset(double f) override;
+  void tune_freq(double f) override;
+  bool start(Call *call) override;
+  void stop() override;
+  void clear() override;
+  double get_freq() override;
+  int get_num() override;
+  int get_freq_error() const;
+  void set_tdma(bool phase2) override;
+  void switch_tdma(bool phase2) override;
+  void set_tdma_slot(int slot) override;
+  void set_source(long src) override;
+  double since_last_write() override;
   void generate_arb_taps();
-  double get_current_length();
-  bool is_active();
-  bool is_idle();
-  bool is_squelched();
-  std::vector<Transmission> get_transmission_list();
-  State get_state();
-  int lastupdate();
-  long elapsed();
-  Source *get_source();
-  void autotune();
+  double get_current_length() override;
+  bool is_active() override;
+  bool is_idle() override;
+  bool is_squelched() override;
+  std::vector<Transmission> get_transmission_list() override;
+  State get_state() override;
+  int lastupdate() override;
+  long elapsed() override;
+  Source *get_source() override;
+  void autotune() override;
 
 protected:
   State state;
@@ -177,7 +177,7 @@ private:
   gr::filter::pfb_arb_resampler_ccf::sptr arb_resampler;
 
   gr::blocks::multiply_const_ff::sptr rescale;
-  void reset_block(gr::basic_block_sptr block);
+  static void reset_block(const gr::basic_block_sptr &block);
 };
 
 #endif // ifndef P25_RECORDER_H

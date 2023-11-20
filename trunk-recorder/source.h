@@ -61,27 +61,27 @@ class Source {
   std::string device;
   std::string antenna;
   gr::basic_block_sptr source_block;
-  void add_gain_stage(std::string stage_name, int value);
+  void add_gain_stage(const std::string &stage_name, int value);
 
 public:
-  int get_num_available_digital_recorders();
-  int get_num_available_analog_recorders();
-  int get_num();
+  [[nodiscard]] int get_num_available_digital_recorders() const;
+  [[nodiscard]] int get_num_available_analog_recorders() const;
+  [[nodiscard]] int get_num() const;
   Source(double c, double r, double e, std::string driver, std::string device, Config *cfg);
   gr::basic_block_sptr get_src_block();
-  double get_min_hz();
-  double get_max_hz();
+  [[nodiscard]] double get_min_hz() const;
+  [[nodiscard]] double get_max_hz() const;
   void set_min_max();
-  double get_center();
-  double get_rate();
+  [[nodiscard]] double get_center() const;
+  [[nodiscard]] double get_rate() const;
   std::string get_driver();
   std::string get_device();
-  void set_antenna(std::string ant);
+  void set_antenna(const std::string &ant);
   std::string get_antenna();
   void set_error(double e);
-  double get_error();
+  [[nodiscard]] double get_error() const;
   void set_if_gain(int i);
-  int get_if_gain();
+  [[nodiscard]] int get_if_gain() const;
 
   void set_gain_mode(bool m);
   bool get_gain_mode();
@@ -89,10 +89,10 @@ public:
   std::vector<Gain_Stage_t> get_gain_stages();
   int get_gain_by_name(std::string name);
   void set_gain_by_name(std::string name, int r);
-  int get_gain();
+  [[nodiscard]] int get_gain() const;
 
   void set_silence_frames(int m);
-  int get_silence_frames();
+  [[nodiscard]] int get_silence_frames() const;
   int get_bb_gain();
   int get_mix_gain();
   int get_lna_gain();
@@ -102,27 +102,27 @@ public:
   int get_vga2_gain();
   void set_freq_corr(double p);
   void print_recorders();
-  void tune_digital_recorders();
-  int debug_recorder_count();
-  int get_debug_recorder_port();
-  int sigmf_recorder_count();
-  int digital_recorder_count();
-  int analog_recorder_count();
-  Config *get_config();
+  void tune_digital_recorders() const;
+  [[nodiscard]] int debug_recorder_count() const;
+  [[nodiscard]] int get_debug_recorder_port() const;
+  [[nodiscard]] int sigmf_recorder_count() const;
+  [[nodiscard]] int digital_recorder_count() const;
+  [[nodiscard]] int analog_recorder_count() const;
+  [[nodiscard]] Config *get_config() const;
 
-  void create_debug_recorder(gr::top_block_sptr tb, int source_num);
-  void create_sigmf_recorders(gr::top_block_sptr tb, int r);
-  void create_analog_recorders(gr::top_block_sptr tb, int r);
-  void create_digital_recorders(gr::top_block_sptr tb, int r);
-  analog_recorder_sptr create_conventional_recorder(gr::top_block_sptr tb);
-  p25_recorder_sptr create_digital_conventional_recorder(gr::top_block_sptr tb);
-  dmr_recorder_sptr create_dmr_conventional_recorder(gr::top_block_sptr tb);
+  void create_debug_recorder(const gr::top_block_sptr &tb, int source_num);
+  void create_sigmf_recorders(const gr::top_block_sptr &tb, int r);
+  void create_analog_recorders(const gr::top_block_sptr &tb, int r);
+  void create_digital_recorders(const gr::top_block_sptr &tb, int r);
+  analog_recorder_sptr create_conventional_recorder(const gr::top_block_sptr &tb);
+  p25_recorder_sptr create_digital_conventional_recorder(const gr::top_block_sptr &tb);
+  dmr_recorder_sptr create_dmr_conventional_recorder(const gr::top_block_sptr &tb);
 
   Recorder *get_digital_recorder(Call *call);
   Recorder *get_digital_recorder(Talkgroup *talkgroup, int priority, Call *call);
   Recorder *get_analog_recorder(Call *call);
-  Recorder *get_analog_recorder(Talkgroup *talkgroup, int priority, Call *call);
-  Recorder *get_debug_recorder();
+  Recorder *get_analog_recorder(const Talkgroup *talkgroup, int priority, Call *call);
+  [[nodiscard]] Recorder *get_debug_recorder() const;
   Recorder *get_sigmf_recorder();
 
 #if GNURADIO_VERSION < 0x030900
@@ -140,6 +140,6 @@ public:
     return std::dynamic_pointer_cast<gr::uhd::usrp_source, gr::basic_block>(p);
   }
 #endif
-  std::vector<Recorder *> get_recorders();
+  [[nodiscard]] std::vector<Recorder *> get_recorders() const;
 };
 #endif

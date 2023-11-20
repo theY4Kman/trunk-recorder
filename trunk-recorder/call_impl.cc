@@ -23,11 +23,11 @@ Call * Call::make(long t, double f, System *s, Config c) {
   return (Call *) new Call_impl(t, f, s, c);
 }*/
 
-Call *Call::make(TrunkMessage message, System *s, Config c) {
-  return (Call *)new Call_impl(message, s, c);
+Call *Call::make(const TrunkMessage &message, System *s, const Config &c) {
+  return new Call_impl(message, s, c);
 }
 
-Call_impl::Call_impl(long t, double f, System *s, Config c) {
+Call_impl::Call_impl(const long t, const double f, System *s, const Config &c) {
   config = c;
   call_num = call_counter++;
   final_length = 0;
@@ -36,14 +36,14 @@ Call_impl::Call_impl(long t, double f, System *s, Config c) {
   curr_src_id = -1;
   talkgroup = t;
   sys = s;
-  start_time = time(NULL);
-  stop_time = time(NULL);
-  last_update = time(NULL);
+  start_time = time(nullptr);
+  stop_time = time(nullptr);
+  last_update = time(nullptr);
   state = MONITORING;
   monitoringState = UNSPECIFIED;
   debug_recording = false;
   sigmf_recording = false;
-  recorder = NULL;
+  recorder = nullptr;
   phase2_tdma = false;
   tdma_slot = 0;
   encrypted = false;
@@ -53,11 +53,11 @@ Call_impl::Call_impl(long t, double f, System *s, Config c) {
   is_analog = false;
   was_update = false;
   priority = 0;
-  set_freq(f);
+  Call_impl::set_freq(f);
   this->update_talkgroup_display();
 }
 
-Call_impl::Call_impl(TrunkMessage message, System *s, Config c) {
+Call_impl::Call_impl(const TrunkMessage &message, System *s, const Config &c) {
   config = c;
   call_num = call_counter++;
   final_length = 0;
@@ -66,14 +66,14 @@ Call_impl::Call_impl(TrunkMessage message, System *s, Config c) {
   curr_freq = 0;
   talkgroup = message.talkgroup;
   sys = s;
-  start_time = time(NULL);
-  stop_time = time(NULL);
-  last_update = time(NULL);
+  start_time = time(nullptr);
+  stop_time = time(nullptr);
+  last_update = time(nullptr);
   state = MONITORING;
   monitoringState = UNSPECIFIED;
   debug_recording = false;
   sigmf_recording = false;
-  recorder = NULL;
+  recorder = nullptr;
   phase2_tdma = message.phase2_tdma;
   tdma_slot = message.tdma_slot;
   encrypted = message.encrypted;
@@ -87,7 +87,7 @@ Call_impl::Call_impl(TrunkMessage message, System *s, Config c) {
   } else {
     was_update = true;
   }
-  set_freq(message.freq);
+  Call_impl::set_freq(message.freq);
   add_source(message.source);
   this->update_talkgroup_display();
 }
@@ -101,7 +101,7 @@ void Call_impl::restart_call() {
 
 void Call_impl::stop_call() {
 
-  if (this->get_recorder() != NULL) {
+  if (this->get_recorder() != nullptr) {
     // If the call is being recorded, check to see if the recorder is currently in an INACTIVE state. This means that the recorder is not
     // doing anything and can be stopped.
     if ((state == RECORDING) && this->get_recorder()->is_idle()) {
@@ -115,7 +115,7 @@ long Call_impl::get_call_num() {
 void Call_impl::conclude_call() {
 
   // BOOST_LOG_TRIVIAL(info) << "conclude_call()";
-  stop_time = time(NULL);
+  stop_time = time(nullptr);
 
   if (state == RECORDING || (state == MONITORING && monitoringState == SUPERSEDED)) {
     final_length = recorder->get_current_length();
@@ -190,7 +190,7 @@ System *Call_impl::get_system() {
   return sys;
 }
 
-void Call_impl::set_freq(double f) {
+void Call_impl::set_freq(const double f) {
   if (f != curr_freq) {
     curr_freq = f;
   }
@@ -215,7 +215,7 @@ void Call_impl::clear_transmission_list() {
   transmission_list.shrink_to_fit();
 }
 
-void Call_impl::set_debug_recording(bool m) {
+void Call_impl::set_debug_recording(const bool m) {
   debug_recording = m;
 }
 
@@ -223,11 +223,11 @@ bool Call_impl::get_debug_recording() {
   return debug_recording;
 }
 
-void Call_impl::set_sigmf_recording(bool m) {
+void Call_impl::set_sigmf_recording(const bool m) {
   sigmf_recording = m;
 }
 
-void Call_impl::set_is_analog(bool a) {
+void Call_impl::set_is_analog(const bool a) {
   is_analog = a;
 }
 
@@ -239,7 +239,7 @@ bool Call_impl::get_sigmf_recording() {
   return sigmf_recording;
 }
 
-void Call_impl::set_state(State s) {
+void Call_impl::set_state(const State s) {
   state = s;
 }
 
@@ -247,7 +247,7 @@ State Call_impl::get_state() {
   return state;
 }
 
-void Call_impl::set_monitoring_state(MonitoringState s) {
+void Call_impl::set_monitoring_state(const MonitoringState s) {
   monitoringState = s;
 }
 
@@ -255,7 +255,7 @@ MonitoringState Call_impl::get_monitoring_state() {
   return monitoringState;
 }
 
-void Call_impl::set_encrypted(bool m) {
+void Call_impl::set_encrypted(const bool m) {
   encrypted = m;
 }
 
@@ -263,7 +263,7 @@ bool Call_impl::get_encrypted() {
   return encrypted;
 }
 
-void Call_impl::set_emergency(bool m) {
+void Call_impl::set_emergency(const bool m) {
   emergency |= m;
 }
 
@@ -283,7 +283,7 @@ bool Call_impl::get_duplex() {
   return duplex;
 }
 
-void Call_impl::set_tdma_slot(int m) {
+void Call_impl::set_tdma_slot(const int m) {
   tdma_slot = m;
   if (!phase2_tdma && tdma_slot) {
     BOOST_LOG_TRIVIAL(error) << "WHAT! SLot is 1 and TDMA is off";
@@ -294,7 +294,7 @@ int Call_impl::get_tdma_slot() {
   return tdma_slot;
 }
 
-void Call_impl::set_phase2_tdma(bool p) {
+void Call_impl::set_phase2_tdma(const bool p) {
   phase2_tdma = p;
 }
 
@@ -310,7 +310,7 @@ long Call_impl::get_current_source_id() {
   return curr_src_id;
 }
 
-bool Call_impl::add_source(long src) {
+bool Call_impl::add_source(const long src) {
   if (src == -1) {
     return false;
   }
@@ -323,18 +323,18 @@ bool Call_impl::add_source(long src) {
 
   if (state == RECORDING) {
     Recorder *rec = this->get_recorder();
-    if (rec != NULL) {
+    if (rec != nullptr) {
       rec->set_source(src);
     }
   }
 
-  plugman_signal(src, NULL, gr::blocks::SignalType::Normal, this, this->get_system(), NULL);
+  plugman_signal(src, nullptr, gr::blocks::SignalType::Normal, this, this->get_system(), nullptr);
 
   return true;
 }
 
-bool Call_impl::update(TrunkMessage message) {
-    last_update = time(NULL);
+bool Call_impl::update(const TrunkMessage message) {
+    last_update = time(nullptr);
     if ((message.freq != this->curr_freq) || (message.talkgroup != this->talkgroup)) {
       BOOST_LOG_TRIVIAL(error) << "[" << sys->get_short_name() << "]\t\033[0;34m" << this->get_call_num() << "C\033[0m\tCall_impl Update, message mismatch - Call_impl TG: " << get_talkgroup() << "\t Call_impl Freq: " << get_freq() << "\tMsg Tg: " << message.talkgroup << "\tMsg Freq: " << message.freq;
     } else {
@@ -344,13 +344,13 @@ bool Call_impl::update(TrunkMessage message) {
 }
 
 int Call_impl::since_last_update() {
-  return time(NULL) - last_update;
+  return time(nullptr) - last_update;
 }
 
 double Call_impl::since_last_voice_update() {
     if (state == RECORDING) {
     Recorder *rec = this->get_recorder();
-    if (rec != NULL) {
+    if (rec != nullptr) {
       return rec->since_last_write();
     }
   }
@@ -359,7 +359,7 @@ double Call_impl::since_last_voice_update() {
 
 
 long Call_impl::elapsed() {
-  return time(NULL) - start_time;
+  return time(nullptr) - start_time;
 }
 
 int Call_impl::get_idle_count() {
@@ -382,7 +382,7 @@ std::string Call_impl::get_system_type() {
   return sys->get_system_type();
 }
 
-void Call_impl::set_talkgroup_tag(std::string tag) {
+void Call_impl::set_talkgroup_tag(const std::string tag) {
   talkgroup_tag = tag;
   update_talkgroup_display();
 }

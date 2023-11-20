@@ -56,9 +56,7 @@ std::string format_state(State state) {
 std::string format_state(State state, MonitoringState monitoringState) {
   if (statusAsString) {
     if (state == MONITORING){
-      if(monitoringState == UNSPECIFIED)
-        return "monitoring";
-      else if(monitoringState == UNKNOWN_TG)
+      if(monitoringState == UNKNOWN_TG)
         return "monitoring : UNKNOWN TG";
       else if(monitoringState == IGNORED_TG)
         return "monitoring : IGNORED TG";

@@ -21,73 +21,73 @@ class System;
 
 class Call_impl : public Call {
 public:
-  Call_impl(long t, double f, System *s, Config c);
-  Call_impl(TrunkMessage message, System *s, Config c);
+  Call_impl(long t, double f, System *s, const Config &c);
+  Call_impl(const TrunkMessage &message, System *s, const Config &c);
 
-  long get_call_num();
-  virtual void restart_call();
-  void stop_call();
-  void conclude_call();
-  void set_sigmf_recorder(Recorder *r);
-  Recorder *get_sigmf_recorder();
-  void set_debug_recorder(Recorder *r);
-  Recorder *get_debug_recorder();
-  virtual void set_recorder(Recorder *r);
-  Recorder *get_recorder();
-  double get_freq();
-  int get_sys_num();
-  std::string get_short_name();
-  std::string get_capture_dir();
-  std::string get_temp_dir();
-  void set_freq(double f);
-  long get_talkgroup();
+  long get_call_num() override;
+  void restart_call() override;
+  void stop_call() override;
+  void conclude_call() override;
+  void set_sigmf_recorder(Recorder *r) override;
+  Recorder *get_sigmf_recorder() override;
+  void set_debug_recorder(Recorder *r) override;
+  Recorder *get_debug_recorder() override;
+  void set_recorder(Recorder *r) override;
+  Recorder *get_recorder() override;
+  double get_freq() override;
+  int get_sys_num() override;
+  std::string get_short_name() override;
+  std::string get_capture_dir() override;
+  std::string get_temp_dir() override;
+  void set_freq(double f) override;
+  long get_talkgroup() override;
 
-  bool update(TrunkMessage message);
-  int get_idle_count();
-  void increase_idle_count();
-  void reset_idle_count();
-  double since_last_voice_update();
-  int since_last_update();
-  long elapsed();
+  bool update(TrunkMessage message) override;
+  int get_idle_count() override;
+  void increase_idle_count() override;
+  void reset_idle_count() override;
+  double since_last_voice_update() override;
+  int since_last_update() override;
+  long elapsed() override;
 
-  double get_current_length();
-  long get_stop_time();
-  void set_debug_recording(bool m);
-  bool get_debug_recording();
-  void set_sigmf_recording(bool m);
-  bool get_sigmf_recording();
-  void set_state(State s);
-  State get_state();
-  void set_monitoring_state(MonitoringState s);
-  MonitoringState get_monitoring_state();
-  void set_phase2_tdma(bool m);
-  bool get_phase2_tdma();
-  void set_tdma_slot(int s);
-  int get_tdma_slot();
-  bool get_is_analog();
-  void set_is_analog(bool a);
-  const char *get_xor_mask();
-  virtual time_t get_start_time() { return start_time; }
-  bool is_conventional() { return false; }
-  void set_encrypted(bool m);
-  bool get_encrypted();
-  void set_emergency(bool m);
-  bool get_emergency();
-  int get_priority();
-  bool get_mode();
-  bool get_duplex();
-  std::string get_talkgroup_display();
-  void set_talkgroup_tag(std::string tag);
-  void clear_transmission_list();
-  boost::property_tree::ptree get_stats();
+  double get_current_length() override;
+  long get_stop_time() override;
+  void set_debug_recording(bool m) override;
+  bool get_debug_recording() override;
+  void set_sigmf_recording(bool m) override;
+  bool get_sigmf_recording() override;
+  void set_state(State s) override;
+  State get_state() override;
+  void set_monitoring_state(MonitoringState s) override;
+  MonitoringState get_monitoring_state() override;
+  void set_phase2_tdma(bool m) override;
+  bool get_phase2_tdma() override;
+  void set_tdma_slot(int s) override;
+  int get_tdma_slot() override;
+  bool get_is_analog() override;
+  void set_is_analog(bool a) override;
+  const char *get_xor_mask() override;
+  time_t get_start_time() override { return start_time; }
+  bool is_conventional() override { return false; }
+  void set_encrypted(bool m) override;
+  bool get_encrypted() override;
+  void set_emergency(bool m) override;
+  bool get_emergency() override;
+  int get_priority() override;
+  bool get_mode() override;
+  bool get_duplex() override;
+  std::string get_talkgroup_display() override;
+  void set_talkgroup_tag(std::string tag) override;
+  void clear_transmission_list() override;
+  boost::property_tree::ptree get_stats() override;
 
-  std::string get_talkgroup_tag();
-  std::string get_system_type();
-  double get_final_length();
-  long get_current_source_id();
-  bool get_conversation_mode();
-  System *get_system();
-  std::vector<Transmission> get_transmissions();
+  std::string get_talkgroup_tag() override;
+  std::string get_system_type() override;
+  double get_final_length() override;
+  long get_current_source_id() override;
+  bool get_conversation_mode() override;
+  System *get_system() override;
+  std::vector<Transmission> get_transmissions() override;
 
 protected:
   State state;

@@ -13,10 +13,10 @@
 #include <fstream>
 #include <iostream>
 
-UnitTags::UnitTags() {}
+UnitTags::UnitTags() = default;
 
 void UnitTags::load_unit_tags(std::string filename) {
-  if (filename == "") {
+  if (filename.empty()) {
     return;
   }
 
@@ -38,13 +38,13 @@ void UnitTags::load_unit_tags(std::string filename) {
 
   while (!safeGetline(in, line).eof()) // this works with \r, \n, or \r\n
   {
-    if (line.size() && (line[line.size() - 1] == '\r')) {
+    if (!line.empty() && (line[line.size() - 1] == '\r')) {
       line = line.substr(0, line.size() - 1);
     }
 
     lines_read++;
 
-    if (line == "")
+    if (line.empty())
       continue;
 
     t_tokenizer tok(line, sep);
@@ -61,7 +61,7 @@ void UnitTags::load_unit_tags(std::string filename) {
       continue;
     }
 
-    add(vec[0].c_str(), vec[1].c_str());
+    add(vec[0], vec[1]);
 
     lines_pushed++;
   }
@@ -76,31 +76,28 @@ void UnitTags::load_unit_tags(std::string filename) {
   }
 }
 
-std::string UnitTags::find_unit_tag(long tg_number) {
-  std::string tg_num_str = std::to_string(tg_number);
-  std::string tag = "";
+std::string UnitTags::find_unit_tag(const long unitID) const {
+  const std::string tg_num_str = std::to_string(unitID);
 
-  for (std::vector<UnitTag *>::iterator it = unit_tags.begin(); it != unit_tags.end(); ++it) {
-    UnitTag *tg = (UnitTag *)*it;
-
-    if (regex_match(tg_num_str, tg->pattern)) {
-      tag = regex_replace(tg_num_str, tg->pattern, tg->tag, boost::regex_constants::format_no_copy | boost::regex_constants::format_all);
-      break;
+  for (const auto& unit_tag : unit_tags) {
+    if (regex_match(tg_num_str, unit_tag->pattern)) {
+      return regex_replace(tg_num_str, unit_tag->pattern, unit_tag->tag, boost::regex_constants::format_no_copy | boost::regex_constants::format_all);
     }
   }
 
-  return tag;
+  return "";
 }
 
-void UnitTags::add(std::string pattern, std::string tag) {
+void UnitTags::add(std::string pattern, const std::string &tag) {
   // If the pattern is like /someregex/
-  if (pattern.substr(0, 1).compare("/") == 0 && pattern.substr(pattern.length()-1, 1).compare("/") == 0) {
+  if (pattern.substr(0, 1) == "/" && pattern.substr(pattern.length()-1, 1) == "/") {
     // then remove the / at the beginning and end
     pattern = pattern.substr(1, pattern.length()-2);
   } else {
     // otherwise add ^ and $ to the pattern e.g. ^123$ to make a regex for simple IDs
     pattern = "^" + pattern + "$";
   }
-  UnitTag *unit_tag = new UnitTag(pattern, tag);
+
+  auto *unit_tag = new UnitTag(pattern, tag);
   unit_tags.push_back(unit_tag);
 }

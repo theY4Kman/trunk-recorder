@@ -71,7 +71,7 @@ typedef std::shared_ptr<p25_trunking> p25_trunking_sptr;
 p25_trunking_sptr make_p25_trunking(double f,
                                     double c,
                                     long s,
-                                    gr::msg_queue::sptr queue,
+                                    const gr::msg_queue::sptr &queue,
                                     bool qpsk,
                                     int sys_num);
 
@@ -83,7 +83,7 @@ class p25_trunking : public gr::hier_block2 {
   friend p25_trunking_sptr make_p25_trunking(double f,
                                              double c,
                                              long s,
-                                             gr::msg_queue::sptr queue,
+                                             const gr::msg_queue::sptr &queue,
                                              bool qpsk,
                                              int sys_num);
 
@@ -102,7 +102,7 @@ public:
   void set_rate(long s);
   void tune_offset(double f);
   void tune_freq(double f);
-  double get_freq();
+  double get_freq() const;
   void enable();
 
   gr::msg_queue::sptr tune_queue;
@@ -110,7 +110,7 @@ public:
   gr::msg_queue::sptr rx_queue;
 
 private:
-  p25_trunking::DecimSettings get_decim(long speed);
+  static p25_trunking::DecimSettings get_decim(long speed);
   void generate_arb_taps();
   void initialize_prefilter();
   void initialize_qpsk();

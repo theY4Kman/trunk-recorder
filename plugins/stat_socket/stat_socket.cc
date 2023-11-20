@@ -1,4 +1,4 @@
-#include <time.h>
+#include <ctime>
 #include <vector>
 #include <websocketpp/client.hpp>
 #include <websocketpp/config/asio_no_tls_client.hpp>
@@ -9,7 +9,7 @@
 //#include "../../trunk-recorder/systems/system.h"
 #include "../../trunk-recorder/plugin_manager/plugin_api.h"
 #include "../trunk-recorder/gr_blocks/decoder_wrapper.h"
-#include <boost/dll/alias.hpp> // for BOOST_DLL_ALIAS   
+#include <boost/dll/alias.hpp> // for BOOST_DLL_ALIAS
 #include <json.hpp>
 
 typedef struct stat_plugin_t stat_plugin_t;
@@ -18,9 +18,8 @@ struct stat_plugin_t {
   std::vector<Source *> sources;
   std::vector<System *> systems;
   std::vector<Call *> calls;
-  Config* config;
+  Config *config;
 };
-
 
 class Stat_Socket : public Plugin_Api {
 
@@ -31,33 +30,32 @@ class Stat_Socket : public Plugin_Api {
   client m_client;
   websocketpp::connection_hdl m_hdl;
   websocketpp::lib::mutex m_lock;
-  int retry_attempt;
-  time_t reconnect_time;
-  bool m_reconnect;
+  int retry_attempt{};
+  time_t reconnect_time{};
+  bool m_reconnect{};
   bool m_open;
   bool m_done;
   bool m_config_sent;
   std::vector<Source *> sources;
   std::vector<System *> systems;
   std::vector<Call *> calls;
-  Config* config;
+  Config *config{};
 
 public:
   /**
- * The telemetry client connects to a WebSocket server and sends a message every
- * second containing an integer count. This example can be used as the basis for
- * programs where a client connects and pushes data for logging, stress/load
- * testing, etc.
- */
-  int system_rates(std::vector<System *> systems, float timeDiff) {
+   * The telemetry client connects to a WebSocket server and sends a message every
+   * second containing an integer count. This example can be used as the basis for
+   * programs where a client connects and pushes data for logging, stress/load
+   * testing, etc.
+   */
+  int system_rates(const std::vector<System *> systems, const float timeDiff) override {
     this->systems = systems;
     if (m_open == false)
       return 0;
-      
+
     boost::property_tree::ptree nodes;
 
-    for (std::vector<System *>::iterator it = systems.begin(); it != systems.end(); it++) {
-      System *system = *it;
+    for (const auto system : systems) {
       nodes.push_back(std::make_pair("", system->get_stats_current(timeDiff)));
     }
     return send_object(nodes, "rates", "rates");
@@ -78,13 +76,13 @@ public:
     using websocketpp::lib::bind;
     using websocketpp::lib::placeholders::_1;
     using websocketpp::lib::placeholders::_2;
-    m_client.set_open_handler(bind(&Stat_Socket::on_open, this, _1));
-    m_client.set_close_handler(bind(&Stat_Socket::on_close, this, _1));
-    m_client.set_fail_handler(bind(&Stat_Socket::on_fail, this, _1));
-    m_client.set_message_handler(bind(&Stat_Socket::on_message, this, _1, _2));
+    m_client.set_open_handler([this](auto &&PH1) { on_open(std::forward<decltype(PH1)>(PH1)); });
+    m_client.set_close_handler([this](auto && PH1) { on_close(std::forward<decltype(PH1)>(PH1)); });
+    m_client.set_fail_handler([this](auto && PH1) { on_fail(std::forward<decltype(PH1)>(PH1)); });
+    m_client.set_message_handler(&Stat_Socket::on_message);
   }
 
-  void send_config(std::vector<Source *> sources, std::vector<System *> systems) {
+  void send_config(const std::vector<Source *>& sources, const std::vector<System *>& systems) {
 
     if (m_open == false)
       return;
@@ -96,8 +94,7 @@ public:
     boost::property_tree::ptree systems_node;
     boost::property_tree::ptree sources_node;
 
-    for (std::vector<Source *>::iterator it = sources.begin(); it != sources.end(); it++) {
-      Source *source = *it;
+    for (auto source : sources) {
       std::vector<Gain_Stage_t> gain_stages;
       boost::property_tree::ptree source_node;
       source_node.put("source_num", source->get_num());
@@ -114,8 +111,8 @@ public:
       source_node.put("error", source->get_error());
       source_node.put("gain", source->get_gain());
       gain_stages = source->get_gain_stages();
-      for (std::vector<Gain_Stage_t>::iterator gain_it = gain_stages.begin(); gain_it != gain_stages.end(); gain_it++) {
-        source_node.put(gain_it->stage_name + "_gain", gain_it->value);
+      for (auto &[stage_name, value] : gain_stages) {
+        source_node.put(stage_name + "_gain", value);
       }
       source_node.put("antenna", source->get_antenna());
       source_node.put("analog_recorders", source->analog_recorder_count());
@@ -125,8 +122,8 @@ public:
       sources_node.push_back(std::make_pair("", source_node));
     }
 
-    for (std::vector<System *>::iterator it = systems.begin(); it != systems.end(); ++it) {
-      System *sys = (System *)*it;
+    for (auto & system : systems) {
+      System *sys = system;
 
       boost::property_tree::ptree sys_node;
       boost::property_tree::ptree channels_node;
@@ -152,8 +149,7 @@ public:
 
       //std::cout << "starts: " << std::endl;
 
-      for (std::vector<double>::iterator chan_it = channels.begin(); chan_it != channels.end(); chan_it++) {
-        double channel = *chan_it;
+      for (double channel : channels) {
         boost::property_tree::ptree channel_node;
         //std::cout << "Hello: " << channel << std::endl;
         channel_node.put("", channel);
@@ -191,20 +187,19 @@ public:
     }
 
     std::stringstream stats_str;
-    boost::property_tree::write_json(stats_str, root);
+    write_json(stats_str, root);
 
     // std::cout << stats_str;
     send_stat(stats_str.str());
     m_config_sent = true;
   }
 
-  int send_systems(std::vector<System *> systems) {
+  int send_systems(const std::vector<System *>& systems) {
     if (m_open == false)
       return 0;
     boost::property_tree::ptree node;
 
-    for (std::vector<System *>::iterator it = systems.begin(); it != systems.end(); it++) {
-      System *system = *it;
+    for (const auto system : systems) {
       node.push_back(std::make_pair("", system->get_stats()));
     }
     return send_object(node, "systems", "systems");
@@ -215,51 +210,47 @@ public:
       return 0;
 
     return send_object(system->get_stats(), "system", "system");
-
   }
 
-  int calls_active(std::vector<Call *> calls) {
+  int calls_active(const std::vector<Call *> calls) override {
     if (m_open == false)
       return 0;
     boost::property_tree::ptree node;
 
-    for (std::vector<Call *>::iterator it = calls.begin(); it != calls.end(); it++) {
-      Call *call = *it;
-      //if (call->get_state() == RECORDING) {
-        node.push_back(std::make_pair("", call->get_stats()));
+    for (const auto call : calls) {
+      // if (call->get_state() == RECORDING) {
+      node.push_back(std::make_pair("", call->get_stats()));
       //}
     }
 
     return send_object(node, "calls", "calls_active");
   }
 
-  int send_recorders(std::vector<Recorder *> recorders) {
+  int send_recorders(const std::vector<Recorder *> &recorders) {
 
     if (m_open == false)
       return 0;
     boost::property_tree::ptree node;
 
-    for (std::vector<Recorder *>::iterator it = recorders.begin(); it != recorders.end(); it++) {
-      Recorder *recorder = *it;
+    for (const auto recorder : recorders) {
       node.push_back(std::make_pair("", recorder->get_stats()));
     }
 
     return send_object(node, "recorders", "recorders");
   }
 
-  int call_start(Call *call) {
+  int call_start(Call *call) override {
     if (m_open == false)
       return 0;
 
     return send_object(call->get_stats(), "call", "call_start");
-
   }
 
-  int call_end(Call_Data_t call_info) {
+  int call_end(Call_Data_t call_info) override {
     if (m_open == false)
       return 0;
     return 0;
-    //send_object(call->get_stats(), "call", "call_end");
+    // send_object(call->get_stats(), "call", "call_end");
   }
 
   int send_recorder(Recorder *recorder) {
@@ -269,7 +260,7 @@ public:
     return send_object(recorder->get_stats(), "recorder", "recorder");
   }
 
-  int send_object(boost::property_tree::ptree data, std::string name, std::string type) {
+  int send_object(const boost::property_tree::ptree &data, const std::string &name, const std::string &type) {
     if (m_open == false)
       return 0;
     boost::property_tree::ptree root;
@@ -279,13 +270,11 @@ public:
     root.put("instanceId", this->config->instance_id);
     root.put("instanceKey", this->config->instance_key);
     std::stringstream stats_str;
-    boost::property_tree::write_json(stats_str, root);
+    write_json(stats_str, root);
 
     // std::cout << stats_str;
     return send_stat(stats_str.str());
   }
-
-
 
   void reopen_stat() {
     m_client.reset();
@@ -296,12 +285,12 @@ public:
   void open_stat() {
     // Create a new connection to the given URI
 
-    if (this->config->status_server == "") {
+    if (this->config->status_server.empty()) {
       return;
     }
 
     websocketpp::lib::error_code ec;
-    client::connection_ptr con = m_client.get_connection(this->config->status_server, ec);
+    const client::connection_ptr con = m_client.get_connection(this->config->status_server, ec);
 
     if (ec) {
       m_client.get_alog().write(websocketpp::log::alevel::app, "open_stat: Get WebSocket Connection Error: " + ec.message());
@@ -326,8 +315,8 @@ public:
     // telemetry_thread.join();
   }
 
-  int poll_one() {
-    if (m_reconnect && (reconnect_time - time(NULL) < 0)) {
+  int poll_one() override {
+    if (m_reconnect && (reconnect_time - time(nullptr) < 0)) {
       reopen_stat();
     }
     m_client.poll_one();
@@ -346,7 +335,7 @@ public:
     return m_config_sent;
   }
   // The open handler will signal that we are ready to start sending telemetry
-  void on_open(websocketpp::connection_hdl) {
+  void on_open(const websocketpp::connection_hdl &) {
     m_client.get_alog().write(websocketpp::log::alevel::app,
                               "on_open: WebSocket Connection opened, starting telemetry!");
 
@@ -360,9 +349,7 @@ public:
     send_systems(this->systems);
     std::vector<Recorder *> recorders;
 
-    for (std::vector<Source *>::iterator it = this->sources.begin(); it != this->sources.end(); it++) {
-      Source *source = *it;
-
+    for (const auto source : this->sources) {
       std::vector<Recorder *> sourceRecorders = source->get_recorders();
 
       recorders.insert(recorders.end(), sourceRecorders.begin(), sourceRecorders.end());
@@ -372,7 +359,7 @@ public:
   }
 
   // The close handler will signal that we should stop sending telemetry
-  void on_close(websocketpp::connection_hdl) {
+  void on_close(const websocketpp::connection_hdl&) {
     std::stringstream stream_num;
     std::string str_num;
     m_client.get_alog().write(websocketpp::log::alevel::app,
@@ -384,17 +371,15 @@ public:
     m_config_sent = false;
     m_reconnect = true;
     retry_attempt++;
-    long reconnect_delay = (6 * retry_attempt + (rand() % 30));
+    const long reconnect_delay = (6 * retry_attempt + (rand() % 30));
     stream_num << reconnect_delay;
     stream_num >> str_num;
-    reconnect_time = time(NULL) + reconnect_delay;
+    reconnect_time = time(nullptr) + reconnect_delay;
     m_client.get_alog().write(websocketpp::log::alevel::app, "on_close: Will try to reconnect in:  " + str_num);
   }
 
   // The fail handler will signal that we should stop sending telemetry
-  void on_fail(websocketpp::connection_hdl) {
-    std::stringstream stream_num;
-    std::string str_num;
+  void on_fail(const websocketpp::connection_hdl &) {
     m_client.get_alog().write(websocketpp::log::alevel::app, "on_fail: WebSocket Connection failed, stopping telemetry!");
 
     scoped_lock guard(m_lock);
@@ -402,21 +387,23 @@ public:
     m_done = true;
     m_config_sent = false;
     if (!m_reconnect) {
+      std::stringstream stream_num;
+      std::string str_num;
       m_reconnect = true;
       retry_attempt++;
-      long reconnect_delay = (6 * retry_attempt + (rand() % 30));
+      const long reconnect_delay = (6 * retry_attempt + (rand() % 30));
       stream_num << reconnect_delay;
       stream_num >> str_num;
-      reconnect_time = time(NULL) + reconnect_delay;
+      reconnect_time = time(nullptr) + reconnect_delay;
       m_client.get_alog().write(websocketpp::log::alevel::app, "on_fail: Will try to reconnect in:  " + str_num);
     }
   }
 
-  void on_message(websocketpp::connection_hdl, client::message_ptr msg) {
-    //Need to receive the message so they don't build up. TrunkPlayer sends a message to acknowledge what TrunkRecorder sends.
+  static void on_message(const websocketpp::connection_hdl &, const client::message_ptr& msg) {
+    // Need to receive the message so they don't build up. TrunkPlayer sends a message to acknowledge what TrunkRecorder sends.
   }
 
-  int send_stat(std::string val) {
+  int send_stat(const std::string &val) {
     websocketpp::lib::error_code ec;
     if (m_open) {
       m_client.send(m_hdl, val, websocketpp::frame::opcode::text, ec);
@@ -436,7 +423,7 @@ public:
     }
   }
 
-  int signal(long unitId, const char *signaling_type, gr::blocks::SignalType sig_type, Call *call, System *system, Recorder *recorder) {
+  int signal(const long unitId, const char *signaling_type, gr::blocks::SignalType sig_type, Call *call, System *system, Recorder *recorder) override {
     if (m_open == false || this->config->broadcast_signals == false)
       return 1;
 
@@ -445,22 +432,22 @@ public:
     //signal.put("signal_system_type", signaling_type);
     //signal.put("signal_type", sig_type);
 
-    if (call != NULL) {
+    if (call != nullptr) {
       signal.add_child("call", call->get_stats());
     }
 
-    if (recorder != NULL) {
+    if (recorder != nullptr) {
       signal.add_child("recorder", recorder->get_stats());
     }
 
-    if (system != NULL) {
+    if (system != nullptr) {
       signal.add_child("system", system->get_stats());
     }
 
     return send_object(signal, "signal", "signaling");
   }
 
-  int init(Config *config, std::vector<Source *> sources, std::vector<System *> systems) {
+  int init(Config *config, const std::vector<Source *> sources, const std::vector<System *> systems) override {
 
     this->sources = sources;
     this->systems = systems;
@@ -469,29 +456,29 @@ public:
     return 0;
   }
 
-  int start() {
+  int start() override {
     open_stat();
     return 0;
   }
 
-  int setup_recorder( Recorder *recorder) {
+  int setup_recorder(Recorder *recorder) override {
     this->send_recorder(recorder);
     return 0;
   }
 
-  int setup_system( System *system) {
+  int setup_system(System *system) override {
     this->send_system(system);
     return 0;
   }
 
-  int setup_systems( std::vector<System *> systems) {
+  int setup_systems(const std::vector<System *> systems) override {
     this->systems = systems;
 
     this->send_systems(systems);
     return 0;
   }
 
-  int setup_config( std::vector<Source *> sources, std::vector<System *> systems) {
+  int setup_config(const std::vector<Source *> sources, const std::vector<System *> systems) override {
 
     this->sources = sources;
     this->systems = systems;
@@ -500,21 +487,17 @@ public:
     return 0;
   }
 
+  // Factory method
+  static boost::shared_ptr<Stat_Socket> create() {
+    return boost::make_shared<Stat_Socket>();
+  }
 
-    // Factory method
-    static boost::shared_ptr<Stat_Socket> create() {
-        return boost::shared_ptr<Stat_Socket>(
-            new Stat_Socket()
-        );
-    }
-
- int parse_config(json config_data ){ return 0; }
-   int stop() { return 0; }
-   int setup_sources(std::vector<Source *> sources) { return 0; }
-
+  int parse_config(json config_data) override { return 0; }
+  int stop() override { return 0; }
+  int setup_sources(std::vector<Source *> sources) override { return 0; }
 };
 
 BOOST_DLL_ALIAS(
-   Stat_Socket::create, // <-- this function is exported with...
-    create_plugin                               // <-- ...this alias name
+    Stat_Socket::create, // <-- this function is exported with...
+    create_plugin        // <-- ...this alias name
 )

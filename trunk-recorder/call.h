@@ -20,7 +20,7 @@ class System;
 class Call {
 public:
   // static Call * make(long t, double f, System *s, Config c);
-  static Call *make(TrunkMessage message, System *s, Config c);
+  static Call *make(const TrunkMessage &message, System *s, const Config &c);
   virtual ~Call(){};
   virtual long get_call_num() = 0;
   virtual void restart_call() = 0;

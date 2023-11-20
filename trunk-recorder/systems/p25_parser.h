@@ -32,13 +32,13 @@ public:
   double get_bandwidth(int chan_id, int sys_num);
   std::vector<TrunkMessage> decode_mbt_data(unsigned long opcode, boost::dynamic_bitset<> &header, boost::dynamic_bitset<> &mbt_data, unsigned long link_id, unsigned long nac, int sys_num);
   std::vector<TrunkMessage> decode_tsbk(boost::dynamic_bitset<> &tsbk, unsigned long nac, int sys_num);
-  unsigned long bitset_shift_mask(boost::dynamic_bitset<> &tsbk, int shift, unsigned long long mask);
-  unsigned long bitset_shift_left_mask(boost::dynamic_bitset<> &tsbk, int shift, unsigned long long mask);
+  static unsigned long bitset_shift_mask(const boost::dynamic_bitset<> &tsbk, int shift, unsigned long long mask);
+  static unsigned long bitset_shift_left_mask(const boost::dynamic_bitset<> &tsbk, int shift, unsigned long long mask);
   std::string channel_id_to_string(int chan_id, int sys_num);
-  void print_bitset(boost::dynamic_bitset<> &tsbk);
-  void add_channel(int chan_id, Channel chan, int sys_num);
+  static void print_bitset(boost::dynamic_bitset<> &tsbk);
+  void add_channel(int chan_id, const Channel &chan, int sys_num);
   double channel_id_to_frequency(int chan_id, int sys_num);
-  std::vector<TrunkMessage> parse_message(gr::message::sptr msg, System *system);
+  std::vector<TrunkMessage> parse_message(const gr::message::sptr& msg, System *system);
 };
 
 #endif

@@ -54,11 +54,11 @@
 namespace gr {
 namespace blocks {
 transmission_sink::sptr
-transmission_sink::make(int n_channels, unsigned int sample_rate, int bits_per_sample) {
+transmission_sink::make(const int n_channels, const unsigned int sample_rate, const int bits_per_sample) {
   return gnuradio::get_initial_sptr(new transmission_sink(n_channels, sample_rate, bits_per_sample));
 }
 
-transmission_sink::transmission_sink(int n_channels, unsigned int sample_rate, int bits_per_sample)
+transmission_sink::transmission_sink(const int n_channels, const unsigned int sample_rate, const int bits_per_sample)
     : sync_block("transmission_sink",
                  io_signature::make(1, n_channels, sizeof(int16_t)),
                  io_signature::make(0, 0, 0)),
@@ -78,7 +78,7 @@ transmission_sink::transmission_sink(int n_channels, unsigned int sample_rate, i
 }
 
 void transmission_sink::create_filename() {
-  time_t work_start_time = d_start_time;
+  const time_t work_start_time = d_start_time;
   std::stringstream temp_path_stream;
   tm *ltm = localtime(&work_start_time);
   // Found some good advice on Streams and Strings here: https://blog.sensecodons.com/2013/04/dont-let-stdstringstreamstrcstr-happen.html
@@ -104,14 +104,14 @@ char *transmission_sink::get_filename() {
   return current_filename;
 }
 
-bool transmission_sink::start_recording(Call *call, int slot) {
+bool transmission_sink::start_recording(Call *call, const int slot) {
   this->d_slot = slot;
   this->start_recording(call);
   return true;
 }
 
 bool transmission_sink::start_recording(Call *call) {
-  gr::thread::scoped_lock guard(d_mutex);
+  thread::scoped_lock guard(d_mutex);
   if (d_current_call && d_fp) {
     BOOST_LOG_TRIVIAL(trace) << "Start() - Current_Call & fp are not null! current_filename is: " << current_filename << " Length: " << d_sample_count << std::endl;
   }
@@ -152,7 +152,7 @@ bool transmission_sink::open_internal(const char *filename) {
   //  O_APPEND|
   int fd;
 
-  if ((fd = ::open(filename,
+  if ((fd = open(filename,
                    O_RDWR | O_CREAT | OUR_O_LARGEFILE | OUR_O_BINARY,
                    0664)) < 0) {
     perror(filename);
@@ -173,7 +173,7 @@ bool transmission_sink::open_internal(const char *filename) {
 
   if ((d_fp = fdopen(fd, "rb+")) == NULL) {
     perror(filename);
-    ::close(fd); // don't leak file descriptor if fdopen fails.
+    close(fd); // don't leak file descriptor if fdopen fails.
     BOOST_LOG_TRIVIAL(error) << "wav open failed" << std::endl;
     return false;
   }
@@ -202,7 +202,7 @@ bool transmission_sink::open_internal(const char *filename) {
   return true;
 }
 
-void transmission_sink::set_source(long src) {
+void transmission_sink::set_source(const long src) {
   if (curr_src_id == -1) {
 
     BOOST_LOG_TRIVIAL(info) << "[" << d_current_call_short_name << "]\t\033[0;34m" << d_current_call_num << "C\033[0m\tTG: " << d_current_call_talkgroup_display << "\tFreq: " << format_freq(d_current_call_freq) << "\tUnit ID set via Control Channel, ext: " << src << "\tcurrent: " << curr_src_id << "\t samples: " << d_sample_count;
@@ -260,7 +260,7 @@ void transmission_sink::end_transmission() {
 }
 
 void transmission_sink::stop_recording() {
-  gr::thread::scoped_lock guard(d_mutex);
+  thread::scoped_lock guard(d_mutex);
 
   if (state == RECORDING) {
     BOOST_LOG_TRIVIAL(trace) << "stop_recording() - stopping wavfile sink but recorder state is: " << state << " Sample Count is: " << d_sample_count << std::endl;
@@ -276,7 +276,7 @@ void transmission_sink::stop_recording() {
 }
 
 void transmission_sink::close_wav(bool close_call) {
-  unsigned int byte_count = d_sample_count * d_bytes_per_sample;
+  const unsigned int byte_count = d_sample_count * d_bytes_per_sample;
   wavheader_complete(d_fp, byte_count);
   fclose(d_fp);
   d_fp = NULL;
@@ -294,14 +294,14 @@ State transmission_sink::get_state() {
   return this->state;
 }
 
-int transmission_sink::work(int noutput_items, gr_vector_const_void_star &input_items, gr_vector_void_star &output_items) {
+int transmission_sink::work(const int noutput_items, gr_vector_const_void_star &input_items, gr_vector_void_star &output_items) {
 
-  gr::thread::scoped_lock guard(d_mutex); // hold mutex for duration of this function
+  thread::scoped_lock guard(d_mutex); // hold mutex for duration of this function
 
   // it is possible that we could get part of a transmission after a call has stopped. We shouldn't do any recording if this happens.... this could mean that we miss part of the recording though
   if (!d_current_call) {
-    time_t now = time(NULL);
-    double its_been = difftime(now, d_stop_time);
+    const time_t now = time(nullptr);
+    const double its_been = difftime(now, d_stop_time);
 
     // It is possible the P25 Frame Assembler passes a TDU after the call has timed out.
     // In this case, the termination tag will be transferred on a blank sample and can safely be ignored.
@@ -325,12 +325,12 @@ int transmission_sink::work(int noutput_items, gr_vector_const_void_star &input_
     return noutput_items;
   }
 
-  std::vector<gr::tag_t> tags;
-  pmt::pmt_t src_id_key(pmt::intern("src_id")); // This is the src id from Phase 1, Phase 2 and DMR
-  pmt::pmt_t grp_id_key(pmt::intern("grp_id")); // This is the src id from Phase 1, Phase 2 and DMR
-  pmt::pmt_t terminate_key(pmt::intern("terminate"));
-  pmt::pmt_t spike_count_key(pmt::intern("spike_count"));
-  pmt::pmt_t error_count_key(pmt::intern("error_count"));
+  std::vector<tag_t> tags;
+  const pmt::pmt_t src_id_key(pmt::intern("src_id")); // This is the src id from Phase 1, Phase 2 and DMR
+  const pmt::pmt_t grp_id_key(pmt::intern("grp_id")); // This is the src id from Phase 1, Phase 2 and DMR
+  const pmt::pmt_t terminate_key(pmt::intern("terminate"));
+  const pmt::pmt_t spike_count_key(pmt::intern("spike_count"));
+  const pmt::pmt_t error_count_key(pmt::intern("error_count"));
 
   // pmt::pmt_t squelch_key(pmt::intern("squelch_eob"));
   // get_tags_in_range(tags, 0, nitems_read(0), nitems_read(0) + noutput_items);
@@ -338,10 +338,10 @@ int transmission_sink::work(int noutput_items, gr_vector_const_void_star &input_
   unsigned pos = 0;
   // long curr_src_id = 0;
 
-  for (unsigned int i = 0; i < tags.size(); i++) {
+  for (auto & tag : tags) {
     // BOOST_LOG_TRIVIAL(info) << "TAG! " << tags[i].key;
-    if (pmt::eq(grp_id_key, tags[i].key)) {
-      long grp_id = pmt::to_long(tags[i].value);
+    if (eq(grp_id_key, tag.key)) {
+      const long grp_id = to_long(tag.value);
 
       if ((state == RECORDING) || (state == IDLE)) {
         if (d_current_call_talkgroup_encoded != grp_id) {
@@ -358,9 +358,9 @@ int transmission_sink::work(int noutput_items, gr_vector_const_void_star &input_
         }
       }
     }
-    if (pmt::eq(src_id_key, tags[i].key)) {
-      long src_id = pmt::to_long(tags[i].value);
-      pos = d_sample_count + (tags[i].offset - nitems_read(0));
+    if (eq(src_id_key, tag.key)) {
+      const long src_id = to_long(tag.value);
+      pos = d_sample_count + (tag.offset - nitems_read(0));
 
       if (curr_src_id == -1) {
         // BOOST_LOG_TRIVIAL(info) << "Updated Voice Channel source id: " << src_id << " pos: " << pos << " offset: " << tags[i].offset - nitems_read(0);
@@ -388,9 +388,9 @@ int transmission_sink::work(int noutput_items, gr_vector_const_void_star &input_
       }
     }
 
-    if (pmt::eq(terminate_key, tags[i].key)) {
+    if (eq(terminate_key, tag.key)) {
       d_termination_flag = true;
-      pos = d_sample_count + (tags[i].offset - nitems_read(0));
+      pos = d_sample_count + (tag.offset - nitems_read(0));
 
       // BOOST_LOG_TRIVIAL(info) << "[" << d_current_call_short_name << "]\t\033[0;34m" << d_current_call_num << "C\033[0m\tTG: " << d_current_call_talkgroup_display << "\tFreq: " << format_freq(d_current_call_freq) << "\tTermination - rec sample count " << d_sample_count << " pos: " << pos << " offset: " << tags[i].offset;
 
@@ -399,22 +399,22 @@ int transmission_sink::work(int noutput_items, gr_vector_const_void_star &input_
 
     // Only process Spike and Error Count tags if the sink is currently recording
     if (state == RECORDING) {
-      if (pmt::eq(spike_count_key, tags[i].key)) {
-        d_spike_count = pmt::to_long(tags[i].value);
+      if (eq(spike_count_key, tag.key)) {
+        d_spike_count = to_long(tag.value);
 
-        BOOST_LOG_TRIVIAL(trace) << "[" << d_current_call_short_name << "]\t\033[0;34m" << d_current_call_num << "C\033[0m\tTG: " << d_current_call_talkgroup_display << "\tFreq: " << format_freq(d_current_call_freq) << "\tSpike Count: " << d_spike_count << " pos: " << pos << " offset: " << tags[i].offset;
+        BOOST_LOG_TRIVIAL(trace) << "[" << d_current_call_short_name << "]\t\033[0;34m" << d_current_call_num << "C\033[0m\tTG: " << d_current_call_talkgroup_display << "\tFreq: " << format_freq(d_current_call_freq) << "\tSpike Count: " << d_spike_count << " pos: " << pos << " offset: " << tag.offset;
       }
-      if (pmt::eq(error_count_key, tags[i].key)) {
-        d_error_count = pmt::to_long(tags[i].value);
+      if (eq(error_count_key, tag.key)) {
+        d_error_count = to_long(tag.value);
 
-        BOOST_LOG_TRIVIAL(trace) << "[" << d_current_call_short_name << "]\t\033[0;34m" << d_current_call_num << "C\033[0m\tTG: " << d_current_call_talkgroup_display << "\tFreq: " << format_freq(d_current_call_freq) << "\tError Count: " << d_error_count << " pos: " << pos << " offset: " << tags[i].offset;
+        BOOST_LOG_TRIVIAL(trace) << "[" << d_current_call_short_name << "]\t\033[0;34m" << d_current_call_num << "C\033[0m\tTG: " << d_current_call_talkgroup_display << "\tFreq: " << format_freq(d_current_call_freq) << "\tError Count: " << d_error_count << " pos: " << pos << " offset: " << tag.offset;
       }
     }
   }
   tags.clear();
 
   // if the System for this call is in Transmission Mode, and we have a recording and we got a flag that a Transmission ended...
-  int nwritten = dowork(noutput_items, input_items, output_items);
+  const int nwritten = dowork(noutput_items, input_items, output_items);
 
   return nwritten;
 }
@@ -444,9 +444,9 @@ std::vector<Transmission> transmission_sink::get_transmission_list() {
   return transmission_list;
 }
 
-int transmission_sink::dowork(int noutput_items, gr_vector_const_void_star &input_items, gr_vector_void_star &output_items) {
+int transmission_sink::dowork(const int noutput_items, gr_vector_const_void_star &input_items, gr_vector_void_star &output_items) {
   // block
-  int n_in_chans = input_items.size();
+  const int n_in_chans = input_items.size();
   int16_t sample_buf_s;
   int nwritten = 0;
 
@@ -498,7 +498,7 @@ int transmission_sink::dowork(int noutput_items, gr_vector_const_void_star &inpu
       close_wav(false);
     }
 
-    time_t current_time = time(NULL);
+    const time_t current_time = time(NULL);
     if (current_time == d_start_time) {
       d_start_time = current_time + 1;
     } else {
@@ -554,16 +554,16 @@ int transmission_sink::dowork(int noutput_items, gr_vector_const_void_star &inpu
   return noutput_items;
 }
 
-void transmission_sink::set_bits_per_sample(int bits_per_sample) {
-  gr::thread::scoped_lock guard(d_mutex);
+void transmission_sink::set_bits_per_sample(const int bits_per_sample) {
+  thread::scoped_lock guard(d_mutex);
 
   if ((bits_per_sample == 8) || (bits_per_sample == 16)) {
     d_bytes_per_sample = bits_per_sample / 8;
   }
 }
 
-void transmission_sink::set_sample_rate(unsigned int sample_rate) {
-  gr::thread::scoped_lock guard(d_mutex);
+void transmission_sink::set_sample_rate(const unsigned int sample_rate) {
+  thread::scoped_lock guard(d_mutex);
 
   d_sample_rate = sample_rate;
 }

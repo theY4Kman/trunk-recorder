@@ -41,13 +41,14 @@
 #include <op25_repeater/lib/op25_msg_types.h>
 #include <sstream>
 #include <stdexcept>
-#include <stdio.h>
+#include <utility>
+#include <cstdio>
 
-namespace gr {
-namespace blocks {
+
+namespace gr::blocks {
 
 tps_decoder_sink_impl::sptr
-tps_decoder_sink_impl::make(unsigned int sample_rate, decoder_callback callback) {
+tps_decoder_sink_impl::make(const unsigned int sample_rate, const decoder_callback &callback) {
   return gnuradio::get_initial_sptr(new tps_decoder_sink_impl(sample_rate, callback));
 }
 
@@ -55,7 +56,7 @@ tps_decoder_sink_impl::tps_decoder_sink_impl(unsigned int sample_rate, decoder_c
     : hier_block2("tps_decoder_sink_impl",
                   io_signature::make(1, 1, sizeof(float)),
                   io_signature::make(0, 0, 0)),
-      d_callback(callback) {
+      d_callback(std::move(callback)) {
   rx_queue = gr::msg_queue::make(100);
 
   valve = gr::blocks::copy::make(sizeof(float));
@@ -64,22 +65,21 @@ tps_decoder_sink_impl::tps_decoder_sink_impl(unsigned int sample_rate, decoder_c
   initialize_p25();
 }
 
-std::string tps_decoder_sink_impl::to_hex(const std::string &s, bool upper, bool spaced) {
+std::string tps_decoder_sink_impl::to_hex(const std::string &s, const bool upper, const bool spaced) {
   std::ostringstream result;
 
-  unsigned int c;
   for (std::string::size_type i = 0; i < s.length(); i++) {
     if (spaced && i > 0)
       result << " ";
 
-    c = (unsigned int)(unsigned char)s[i];
+    const unsigned int c = static_cast<unsigned char>(s[i]);
     result << std::hex << std::setfill('0') << std::setw(2) << (upper ? std::uppercase : std::nouppercase) << c;
   }
 
   return result.str();
 }
 
-void tps_decoder_sink_impl::parse_p25_json(std::string json) {
+void tps_decoder_sink_impl::parse_p25_json(const std::string &json) {
   try {
 
     if (json.empty() || json.length() < 3)
@@ -88,7 +88,7 @@ void tps_decoder_sink_impl::parse_p25_json(std::string json) {
     std::stringstream ss;
     ss << json;
     boost::property_tree::ptree pt;
-    boost::property_tree::read_json(ss, pt);
+    read_json(ss, pt);
 
     int srcaddr = atoi(pt.get<std::string>("srcaddr", "0").c_str());
 
@@ -196,11 +196,11 @@ void tps_decoder_sink_impl::process_message_queues() {
   process_message(rx_queue->delete_head_nowait());
 }
 
-void tps_decoder_sink_impl::set_enabled(bool b) { valve->set_enabled(b); };
+void tps_decoder_sink_impl::set_enabled(const bool b) { valve->set_enabled(b); };
 
 bool tps_decoder_sink_impl::get_enabled() { return valve->enabled(); };
 
-void tps_decoder_sink_impl::log_decoder_msg(long unitId, const char *signaling_type, SignalType signal) {
+void tps_decoder_sink_impl::log_decoder_msg(const long unitId, const char *signaling_type, const SignalType signal) {
   if (d_callback != NULL) {
     d_callback(unitId, signaling_type, signal);
   }
@@ -232,7 +232,7 @@ void tps_decoder_sink_impl::initialize_p25() {
   connect(slicer, 0, op25_frame_assembler, 0);
 }
 
-unsigned long tps_decoder_sink_impl::bitset_shift_mask(boost::dynamic_bitset<> &tsbk, int shift, unsigned long long mask) {
+unsigned long tps_decoder_sink_impl::bitset_shift_mask(boost::dynamic_bitset<> &tsbk, const int shift, const unsigned long long mask) {
   boost::dynamic_bitset<> bitmask(tsbk.size(), mask);
   unsigned long result = ((tsbk >> shift) & bitmask).to_ulong();
 
@@ -242,7 +242,7 @@ unsigned long tps_decoder_sink_impl::bitset_shift_mask(boost::dynamic_bitset<> &
   return result;
 }
 
-void tps_decoder_sink_impl::decode_mbt_data(unsigned long opcode, boost::dynamic_bitset<> &header, boost::dynamic_bitset<> &mbt_data, unsigned long sa, unsigned long nac) {
+void tps_decoder_sink_impl::decode_mbt_data(const unsigned long opcode, boost::dynamic_bitset<> &header, boost::dynamic_bitset<> &mbt_data, unsigned long sa, unsigned long nac) {
   long unit_id = 0;
   bool emergency = false;
 
@@ -299,5 +299,5 @@ void tps_decoder_sink_impl::decode_tsbk(boost::dynamic_bitset<> &tsbk, unsigned 
     log_decoder_msg(unit_id, "TPS", emergency ? SignalType::Emergency : SignalType::Normal);
   }
 }
-} /* namespace blocks */
-} /* namespace gr */
+} // namespace gr::blocks
+
